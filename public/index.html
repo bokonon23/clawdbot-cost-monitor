@@ -729,7 +729,7 @@
         return;
       }
       
-      const totalTokens = data.totalInputTokens + data.totalOutputTokens;
+      const totalTokens = data.totalInputTokens + data.totalOutputTokens + data.totalCacheReadTokens + data.totalCacheWriteTokens;
       const budget = getBudget();
       
       let html = ``;
@@ -752,8 +752,34 @@
       const existingProjection = document.querySelector('.projection-card');
       if (existingProjection) html += existingProjection.outerHTML;
       
-      // Calculate cost per 1K tokens for context
-      const costPerMessage = totalTokens > 0 ? (data.totalCost / (totalTokens / 1000)) : 0;
+      // Calculate what cost WOULD be without caching
+      const costWithoutCaching = ((data.totalInputTokens + data.totalCacheReadTokens) / 1_000_000) * 3.00 + 
+                                 (data.totalOutputTokens / 1_000_000) * 15.00;
+      const savingsFromCaching = costWithoutCaching - data.totalCost;
+      const savingsPercent = costWithoutCaching > 0 ? ((savingsFromCaching / costWithoutCaching) * 100) : 0;
+      
+      // Show cache savings if significant
+      let cachingExplainer = '';
+      if (data.totalCacheReadTokens > 0 && savingsFromCaching > 0.10) {
+        cachingExplainer = `
+          <div class="model-breakdown" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; margin-bottom: 30px;">
+            <h2 style="color: white;">💚 Prompt Caching Savings</h2>
+            <div style="font-size: 1.8rem; font-weight: bold; margin-bottom: 10px;">
+              $${savingsFromCaching.toFixed(2)} saved (${savingsPercent.toFixed(0)}% off)
+            </div>
+            <div style="opacity: 0.95; line-height: 1.6;">
+              Clawdbot uses <strong>Prompt Caching</strong> to dramatically reduce costs. Instead of sending your entire chat 
+              history with every message, it stores repeated context and reuses it at <strong>90% discount</strong>.
+              <br><br>
+              <strong>Your Token Breakdown:</strong><br>
+              • New input: ${formatTokens(data.totalInputTokens)} tokens × $3.00/M = $${((data.totalInputTokens/1_000_000)*3).toFixed(3)}<br>
+              • AI responses: ${formatTokens(data.totalOutputTokens)} tokens × $15.00/M = $${((data.totalOutputTokens/1_000_000)*15).toFixed(3)}<br>
+              • Cached reads: ${formatTokens(data.totalCacheReadTokens)} tokens × $0.30/M = $${((data.totalCacheReadTokens/1_000_000)*0.30).toFixed(3)} 💰<br>
+              ${data.totalCacheWriteTokens > 0 ? `• Cache writes: ${formatTokens(data.totalCacheWriteTokens)} tokens × $3.75/M = $${((data.totalCacheWriteTokens/1_000_000)*3.75).toFixed(3)}<br>` : ''}
+            </div>
+          </div>
+        `;
+      }
       
       html += `
         <div class="cards">
@@ -766,19 +792,21 @@
           <div class="card">
             <h2>
               <span class="tooltip">Total Tokens
-                <span class="tooltiptext">Tokens are pieces of text (roughly 4 characters or ¾ of a word). Both your messages and the AI's responses count as tokens. More tokens = higher cost.</span>
+                <span class="tooltiptext"><strong>Tokens = Pieces of Text</strong><br><br>1 token ≈ 4 characters or ¾ of a word.<br><br><strong>Input:</strong> Your messages + chat history sent to AI<br><strong>Output:</strong> AI's response back to you<br><strong>Cached:</strong> Reused history (90% cheaper!)<br><br>More tokens = higher cost, but caching helps a lot!</span>
               </span>
             </h2>
             <div class="value">${formatTokens(totalTokens)}</div>
-            <div class="subtext">≈ $${costPerMessage.toFixed(3)} per 1,000 tokens</div>
+            <div class="subtext">${formatTokens(data.totalCacheReadTokens)} cached (90% discount)</div>
           </div>
           
           <div class="card">
-            <h2>AI Model</h2>
-            <div class="value">${Object.keys(data.byModel).length}</div>
-            <div class="subtext">${data.sessions.length} conversation${data.sessions.length !== 1 ? 's' : ''}</div>
+            <h2>Sessions</h2>
+            <div class="value">${data.sessions.length}</div>
+            <div class="subtext">${Object.keys(data.byModel).length} model${Object.keys(data.byModel).length !== 1 ? 's' : ''}</div>
           </div>
         </div>
+        
+        ${cachingExplainer}
       `;
       
       // 7-day chart
@@ -799,11 +827,17 @@
         
         sortedModels.forEach(([model, stats]) => {
           const percentage = ((stats.cost / data.totalCost) * 100).toFixed(1);
-          const totalModelTokens = stats.inputTokens + stats.outputTokens;
+          const totalModelTokens = stats.inputTokens + stats.outputTokens + stats.cacheReadTokens + stats.cacheWriteTokens;
           const avgCostPerConvo = stats.sessions > 0 ? (stats.cost / stats.sessions) : 0;
           
           // Simplify model names
           const displayName = model.replace('anthropic/', '').replace('openai/', '');
+          
+          // Build token breakdown string
+          let tokenBreakdown = `${formatTokens(totalModelTokens)} total`;
+          if (stats.cacheReadTokens > 0) {
+            tokenBreakdown += ` (${formatTokens(stats.cacheReadTokens)} cached)`;
+          }
           
           html += `
             <div class="model-item">
@@ -811,7 +845,8 @@
                 <div class="model-name">${displayName}</div>
                 <div class="model-tokens">
                   ${stats.sessions} conversation${stats.sessions !== 1 ? 's' : ''} · 
-                  Avg ${formatCost(avgCostPerConvo)}/conversation
+                  ${tokenBreakdown} · 
+                  Avg ${formatCost(avgCostPerConvo)}/chat
                 </div>
               </div>
               <div class="model-stats">
