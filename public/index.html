@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Clawdbot Cost Monitor</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -196,6 +197,61 @@
       line-height: 1.6;
     }
     
+    .projection-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 15px;
+      padding: 25px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    
+    .projection-card h2 {
+      font-size: 1.3rem;
+      margin-bottom: 15px;
+      opacity: 0.9;
+    }
+    
+    .projection-value {
+      font-size: 3rem;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    
+    .projection-details {
+      opacity: 0.9;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    
+    .budget-alert {
+      background: #ff9800;
+      color: white;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 30px;
+      font-weight: 600;
+      box-shadow: 0 10px 30px rgba(255,152,0,0.3);
+    }
+    
+    .budget-alert.warning {
+      background: #f44336;
+    }
+    
+    .chart-container {
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .chart-container h2 {
+      font-size: 1.3rem;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    
     footer {
       text-align: center;
       color: white;
@@ -230,6 +286,8 @@
   
   <script>
     let ws;
+    let costChart = null;
+    const BUDGET_THRESHOLD = 50; // $50 monthly budget
     
     function connect() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -237,6 +295,8 @@
       
       ws.onopen = () => {
         updateStatus('connected', '🟢 Connected');
+        loadHistoricalData();
+        loadProjection();
       };
       
       ws.onmessage = (event) => {
@@ -252,6 +312,26 @@
         updateStatus('error', '🟡 Disconnected');
         setTimeout(connect, 3000);
       };
+    }
+    
+    async function loadHistoricalData() {
+      try {
+        const response = await fetch('/api/history?days=7');
+        const history = await response.json();
+        renderChart(history);
+      } catch (error) {
+        console.error('Failed to load history:', error);
+      }
+    }
+    
+    async function loadProjection() {
+      try {
+        const response = await fetch('/api/projection');
+        const projection = await response.json();
+        renderProjection(projection);
+      } catch (error) {
+        console.error('Failed to load projection:', error);
+      }
     }
     
     function updateStatus(className, text) {
@@ -273,6 +353,101 @@
       return tokens.toString();
     }
     
+    function renderChart(history) {
+      if (history.length === 0) return;
+      
+      const ctx = document.getElementById('costChart');
+      if (!ctx) return;
+      
+      const labels = history.map(h => {
+        const date = new Date(h.date);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      });
+      
+      const costs = history.map(h => h.cost);
+      
+      if (costChart) {
+        costChart.destroy();
+      }
+      
+      costChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Daily Cost ($)',
+            data: costs,
+            borderColor: '#667eea',
+            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return '$' + value.toFixed(2);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    function renderProjection(projection) {
+      if (!projection || !projection.projectedMonthTotal) return;
+      
+      const projectionHtml = `
+        <div class="projection-card">
+          <h2>📊 Monthly Projection</h2>
+          <div class="projection-value">$${projection.projectedMonthTotal.toFixed(2)}</div>
+          <div class="projection-details">
+            At your current rate of <strong>$${projection.avgDailyRate.toFixed(2)}/day</strong>, 
+            you're on track to spend <strong>$${projection.projectedMonthTotal.toFixed(2)}</strong> this month.
+            <br><br>
+            Current month total: $${projection.currentMonthTotal.toFixed(2)} · 
+            ${projection.daysRemaining} days remaining
+          </div>
+        </div>
+      `;
+      
+      const existingProjection = document.querySelector('.projection-card');
+      if (existingProjection) {
+        existingProjection.outerHTML = projectionHtml;
+      } else {
+        const contentDiv = document.getElementById('content');
+        contentDiv.insertAdjacentHTML('afterbegin', projectionHtml);
+      }
+      
+      // Show budget alert if over threshold
+      if (projection.projectedMonthTotal > BUDGET_THRESHOLD) {
+        const alertHtml = `
+          <div class="budget-alert ${projection.projectedMonthTotal > BUDGET_THRESHOLD * 1.5 ? 'warning' : ''}">
+            ⚠️ Budget Alert: You're projected to exceed your $${BUDGET_THRESHOLD} monthly budget!
+          </div>
+        `;
+        
+        const existingAlert = document.querySelector('.budget-alert');
+        if (existingAlert) {
+          existingAlert.outerHTML = alertHtml;
+        } else {
+          const contentDiv = document.getElementById('content');
+          contentDiv.insertAdjacentHTML('afterbegin', alertHtml);
+        }
+      }
+    }
+    
     function renderData(data) {
       if (data.error) {
         document.getElementById('content').innerHTML = `
@@ -287,7 +462,15 @@
       
       const totalTokens = data.totalInputTokens + data.totalOutputTokens;
       
-      let html = `
+      let html = ``;
+      
+      // Keep projection and budget alert if they exist
+      const existingProjection = document.querySelector('.projection-card');
+      const existingAlert = document.querySelector('.budget-alert');
+      if (existingProjection) html += existingProjection.outerHTML;
+      if (existingAlert) html += existingAlert.outerHTML;
+      
+      html += `
         <div class="cards">
           <div class="card">
             <h2>Total Cost</h2>
@@ -309,11 +492,21 @@
         </div>
       `;
       
+      // 7-day chart
+      html += `
+        <div class="chart-container">
+          <h2>📈 7-Day Cost History</h2>
+          <div style="height: 250px;">
+            <canvas id="costChart"></canvas>
+          </div>
+        </div>
+      `;
+      
       // Model breakdown
       const sortedModels = Object.entries(data.byModel).sort((a, b) => b[1].cost - a[1].cost);
       
       if (sortedModels.length > 0) {
-        html += `<div class="model-breakdown"><h2>📊 Cost by Model</h2>`;
+        html += `<div class="model-breakdown"><h2>💰 Cost by Model</h2>`;
         
         sortedModels.forEach(([model, stats]) => {
           const percentage = ((stats.cost / data.totalCost) * 100).toFixed(1);
@@ -354,10 +547,17 @@
       }
       
       document.getElementById('content').innerHTML = html;
+      
+      // Re-render chart and projection after updating content
+      loadHistoricalData();
+      loadProjection();
     }
     
     // Initialize
     connect();
+    
+    // Reload projection every 5 minutes
+    setInterval(loadProjection, 5 * 60 * 1000);
   </script>
 </body>
 </html>
