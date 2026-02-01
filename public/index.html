@@ -730,14 +730,27 @@
       }
       
       const totalTokens = data.totalInputTokens + data.totalOutputTokens;
+      const budget = getBudget();
       
       let html = ``;
       
-      // Keep projection and budget alert if they exist
+      // Check if current spending exceeds budget (immediate alert, no projection needed)
+      if (data.totalCost > budget * 0.8) {
+        const percentUsed = ((data.totalCost / budget) * 100).toFixed(0);
+        const isOverBudget = data.totalCost > budget;
+        
+        const alertHtml = `
+          <div class="budget-alert ${isOverBudget ? 'warning' : ''}">
+            ${isOverBudget ? '🚨' : '⚠️'} ${isOverBudget ? 'Over Budget!' : 'Budget Warning'}: 
+            You've spent $${data.totalCost.toFixed(2)} of your $${budget.toFixed(0)} monthly budget (${percentUsed}%)
+          </div>
+        `;
+        html += alertHtml;
+      }
+      
+      // Keep projection if it exists
       const existingProjection = document.querySelector('.projection-card');
-      const existingAlert = document.querySelector('.budget-alert');
       if (existingProjection) html += existingProjection.outerHTML;
-      if (existingAlert) html += existingAlert.outerHTML;
       
       // Calculate cost per 1K tokens for context
       const costPerMessage = totalTokens > 0 ? (data.totalCost / (totalTokens / 1000)) : 0;
