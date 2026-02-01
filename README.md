@@ -4,6 +4,10 @@
 
 Unlike Claude's platform dashboard which only shows overall API usage, this gives you OpenClaw-specific insights with historical tracking and budget projections.
 
+![Dashboard Screenshot](screenshots/dashboard.png)
+
+![Budget Alert](screenshots/budget-alert.png)
+
 ## The Problem
 
 OpenClaw/Clawdbot users have no idea what they're spending:
