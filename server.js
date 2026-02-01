@@ -71,11 +71,12 @@ server.listen(PORT, () => {
   console.log(`
 ╔════════════════════════════════════════════════════════════════╗
 ║                                                                ║
-║   💰 OPENCLAW COST MONITOR v0.2.1                              ║
+║   💰 OPENCLAW COST MONITOR v0.3.0                              ║
 ║                                                                ║
 ║   Dashboard: http://localhost:${PORT}                            ║
 ║                                                                ║
 ║   ✨ Track your OpenClaw/Clawdbot AI spending                  ║
+║   💚 Now with accurate prompt caching costs!                   ║
 ║                                                                ║
 ╚════════════════════════════════════════════════════════════════╝
   `);
