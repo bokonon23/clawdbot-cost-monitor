@@ -265,9 +265,203 @@
       font-size: 1.2rem;
       padding: 40px;
     }
+    
+    .settings-button {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: white;
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      cursor: pointer;
+      font-size: 1.5rem;
+      transition: transform 0.2s;
+    }
+    
+    .settings-button:hover {
+      transform: scale(1.1);
+    }
+    
+    .settings-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .settings-modal.active {
+      display: flex;
+    }
+    
+    .settings-content {
+      background: white;
+      border-radius: 15px;
+      padding: 40px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    .settings-content h2 {
+      margin-bottom: 25px;
+      color: #333;
+    }
+    
+    .setting-item {
+      margin-bottom: 25px;
+    }
+    
+    .setting-item label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #555;
+    }
+    
+    .setting-item input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+    
+    .setting-item input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .setting-item p {
+      margin-top: 8px;
+      font-size: 0.85rem;
+      color: #999;
+    }
+    
+    .settings-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 30px;
+    }
+    
+    .btn {
+      flex: 1;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #5568d3;
+    }
+    
+    .btn-secondary {
+      background: #e0e0e0;
+      color: #555;
+    }
+    
+    .btn-secondary:hover {
+      background: #d0d0d0;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+    
+    .empty-state h3 {
+      font-size: 1.3rem;
+      margin-bottom: 15px;
+      color: #666;
+    }
+    
+    .empty-state p {
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    
+    .tooltip {
+      position: relative;
+      display: inline-block;
+      cursor: help;
+      border-bottom: 1px dotted #999;
+    }
+    
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 280px;
+      background-color: #333;
+      color: #fff;
+      text-align: left;
+      border-radius: 8px;
+      padding: 12px;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      margin-left: -140px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+    
+    .tooltip .tooltiptext::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: #333 transparent transparent transparent;
+    }
+    
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
+  <button class="settings-button" onclick="openSettings()">⚙️</button>
+  
+  <div class="settings-modal" id="settingsModal">
+    <div class="settings-content">
+      <h2>⚙️ Settings</h2>
+      
+      <div class="setting-item">
+        <label for="budgetInput">Monthly Budget ($)</label>
+        <input type="number" id="budgetInput" placeholder="50" min="1" step="1">
+        <p>Set your monthly AI spending budget. You'll get alerts when you're on track to exceed it.</p>
+      </div>
+      
+      <div class="settings-buttons">
+        <button class="btn btn-secondary" onclick="closeSettings()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveBudget()">Save</button>
+      </div>
+    </div>
+  </div>
+  
   <div class="container">
     <header>
       <h1>💰 Clawdbot Cost Monitor</h1>
@@ -287,7 +481,45 @@
   <script>
     let ws;
     let costChart = null;
-    const BUDGET_THRESHOLD = 50; // $50 monthly budget
+    
+    // Load budget from localStorage (default $50)
+    function getBudget() {
+      const saved = localStorage.getItem('monthlyBudget');
+      return saved ? parseFloat(saved) : 50;
+    }
+    
+    function setBudget(amount) {
+      localStorage.setItem('monthlyBudget', amount);
+    }
+    
+    function openSettings() {
+      document.getElementById('budgetInput').value = getBudget();
+      document.getElementById('settingsModal').classList.add('active');
+    }
+    
+    function closeSettings() {
+      document.getElementById('settingsModal').classList.remove('active');
+    }
+    
+    function saveBudget() {
+      const budget = parseFloat(document.getElementById('budgetInput').value);
+      if (budget && budget > 0) {
+        setBudget(budget);
+        closeSettings();
+        // Reload data to update alerts
+        loadProjection();
+      } else {
+        alert('Please enter a valid budget amount');
+      }
+    }
+    
+    // Close modal when clicking outside
+    document.addEventListener('click', (e) => {
+      const modal = document.getElementById('settingsModal');
+      if (e.target === modal) {
+        closeSettings();
+      }
+    });
     
     function connect() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -354,10 +586,24 @@
     }
     
     function renderChart(history) {
-      if (history.length === 0) return;
-      
       const ctx = document.getElementById('costChart');
       if (!ctx) return;
+      
+      if (history.length === 0) {
+        // Show empty state instead of blank chart
+        const container = ctx.closest('.chart-container');
+        if (container) {
+          const chartDiv = container.querySelector('div');
+          chartDiv.innerHTML = `
+            <div class="empty-state">
+              <h3>📊 Graph Coming Soon</h3>
+              <p>Your cost history will appear here after 24 hours of usage.</p>
+              <p style="margin-top: 10px;">The app automatically tracks your spending every hour.</p>
+            </div>
+          `;
+        }
+        return;
+      }
       
       const labels = history.map(h => {
         const date = new Date(h.date);
@@ -406,8 +652,28 @@
     }
     
     function renderProjection(projection) {
-      if (!projection || !projection.projectedMonthTotal) return;
+      if (!projection || !projection.projectedMonthTotal) {
+        // Show empty state for projection
+        const existingProjection = document.querySelector('.projection-card');
+        if (!existingProjection) {
+          const emptyProjectionHtml = `
+            <div class="projection-card">
+              <h2>📊 Monthly Projection</h2>
+              <div class="projection-details">
+                <div class="empty-state" style="padding: 20px 0; color: rgba(255,255,255,0.8);">
+                  <p>Your monthly cost projection will appear here after 24-48 hours of usage.</p>
+                  <p style="margin-top: 10px;">We need at least 2 days of data to calculate an accurate projection.</p>
+                </div>
+              </div>
+            </div>
+          `;
+          const contentDiv = document.getElementById('content');
+          contentDiv.insertAdjacentHTML('afterbegin', emptyProjectionHtml);
+        }
+        return;
+      }
       
+      const budget = getBudget();
       const projectionHtml = `
         <div class="projection-card">
           <h2>📊 Monthly Projection</h2>
@@ -417,7 +683,8 @@
             you're on track to spend <strong>$${projection.projectedMonthTotal.toFixed(2)}</strong> this month.
             <br><br>
             Current month total: $${projection.currentMonthTotal.toFixed(2)} · 
-            ${projection.daysRemaining} days remaining
+            ${projection.daysRemaining} days remaining · 
+            Budget: $${budget.toFixed(0)}/month
           </div>
         </div>
       `;
@@ -431,10 +698,11 @@
       }
       
       // Show budget alert if over threshold
-      if (projection.projectedMonthTotal > BUDGET_THRESHOLD) {
+      if (projection.projectedMonthTotal > budget) {
+        const percentOver = ((projection.projectedMonthTotal / budget) - 1) * 100;
         const alertHtml = `
-          <div class="budget-alert ${projection.projectedMonthTotal > BUDGET_THRESHOLD * 1.5 ? 'warning' : ''}">
-            ⚠️ Budget Alert: You're projected to exceed your $${BUDGET_THRESHOLD} monthly budget!
+          <div class="budget-alert ${projection.projectedMonthTotal > budget * 1.5 ? 'warning' : ''}">
+            ⚠️ Budget Alert: You're projected to exceed your $${budget.toFixed(0)} monthly budget by ${percentOver.toFixed(0)}%!
           </div>
         `;
         
@@ -470,6 +738,9 @@
       if (existingProjection) html += existingProjection.outerHTML;
       if (existingAlert) html += existingAlert.outerHTML;
       
+      // Calculate cost per 1K tokens for context
+      const costPerMessage = totalTokens > 0 ? (data.totalCost / (totalTokens / 1000)) : 0;
+      
       html += `
         <div class="cards">
           <div class="card">
@@ -479,15 +750,19 @@
           </div>
           
           <div class="card">
-            <h2>Total Tokens</h2>
+            <h2>
+              <span class="tooltip">Total Tokens
+                <span class="tooltiptext">Tokens are pieces of text (roughly 4 characters or ¾ of a word). Both your messages and the AI's responses count as tokens. More tokens = higher cost.</span>
+              </span>
+            </h2>
             <div class="value">${formatTokens(totalTokens)}</div>
-            <div class="subtext">${formatTokens(data.totalInputTokens)} in · ${formatTokens(data.totalOutputTokens)} out</div>
+            <div class="subtext">≈ $${costPerMessage.toFixed(3)} per 1,000 tokens</div>
           </div>
           
           <div class="card">
-            <h2>Models Used</h2>
+            <h2>AI Model</h2>
             <div class="value">${Object.keys(data.byModel).length}</div>
-            <div class="subtext">${data.sessions.length} session${data.sessions.length !== 1 ? 's' : ''}</div>
+            <div class="subtext">${data.sessions.length} conversation${data.sessions.length !== 1 ? 's' : ''}</div>
           </div>
         </div>
       `;
@@ -510,15 +785,24 @@
         
         sortedModels.forEach(([model, stats]) => {
           const percentage = ((stats.cost / data.totalCost) * 100).toFixed(1);
+          const totalModelTokens = stats.inputTokens + stats.outputTokens;
+          const avgCostPerConvo = stats.sessions > 0 ? (stats.cost / stats.sessions) : 0;
+          
+          // Simplify model names
+          const displayName = model.replace('anthropic/', '').replace('openai/', '');
+          
           html += `
             <div class="model-item">
               <div>
-                <div class="model-name">${model}</div>
-                <div class="model-tokens">${formatTokens(stats.inputTokens + stats.outputTokens)} tokens · ${stats.sessions} session${stats.sessions !== 1 ? 's' : ''}</div>
+                <div class="model-name">${displayName}</div>
+                <div class="model-tokens">
+                  ${stats.sessions} conversation${stats.sessions !== 1 ? 's' : ''} · 
+                  Avg ${formatCost(avgCostPerConvo)}/conversation
+                </div>
               </div>
               <div class="model-stats">
                 <div class="model-cost">${formatCost(stats.cost)}</div>
-                <div class="model-tokens">${percentage}%</div>
+                <div class="model-tokens">${percentage}% of total</div>
               </div>
             </div>
           `;
