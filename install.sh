@@ -35,6 +35,9 @@ if [ $? -eq 0 ]; then
     echo "🚀 To start the dashboard:"
     echo "   npm start"
     echo ""
+    echo "🛠️  To run as a macOS service (auto-start + restart on crash):"
+    echo "   npm run service:install"
+    echo ""
     echo "   Then open: http://localhost:3939"
     echo ""
 else
