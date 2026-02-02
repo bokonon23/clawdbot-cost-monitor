@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "service:install": "bash scripts/install-macos-service.sh",
+    "service:uninstall": "bash scripts/uninstall-macos-service.sh"
   },
   "keywords": ["openclaw", "clawdbot", "cost", "tracking", "ai", "monitoring"],
   "author": "B (Blockstrata)",
