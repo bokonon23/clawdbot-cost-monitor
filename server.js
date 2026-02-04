@@ -9,7 +9,7 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-const PORT = process.env.PORT || 3939;
+const PORT = 60002;
 const UPDATE_INTERVAL = 30000; // Update every 30 seconds (reduced refresh rate)
 const SNAPSHOT_INTERVAL = 60 * 60 * 1000; // Save snapshot every hour
 

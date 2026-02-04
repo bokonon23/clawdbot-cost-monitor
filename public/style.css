@@ -408,60 +408,28 @@ header h1 {
   color: var(--text-secondary);
 }
 
-/* Savings Card */
-.savings-card {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  border: none;
-  margin-bottom: 30px;
-  animation: fadeInUp 0.6s ease 0.3s both;
-  position: relative;
-  overflow: hidden;
-}
-
-.savings-card::after {
-  content: '🎉';
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  font-size: 3rem;
-  opacity: 0.2;
-  animation: celebrate 1s ease-in-out infinite;
-}
-
-@keyframes celebrate {
-  0%, 100% { transform: rotate(-10deg); }
-  50% { transform: rotate(10deg); }
-}
-
-.savings-content h2 {
-  color: white;
-  margin-bottom: 15px;
-  font-size: 1.3rem;
-}
-
-.savings-amount {
-  font-size: 3rem;
-  font-weight: 700;
-  color: white;
-  margin-bottom: 10px;
-}
-
-.savings-details {
-  color: rgba(255, 255, 255, 0.9);
-  line-height: 1.8;
-}
-
-.savings-breakdown {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.breakdown-item {
+/* Compact Caching Savings */
+.savings-compact {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  font-size: 0.95rem;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 10px;
+  margin-bottom: 30px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  animation: fadeInUp 0.6s ease 0.6s both;
+}
+
+.savings-compact-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.savings-compact-text strong {
+  color: #34d399;
 }
 
 /* Charts */

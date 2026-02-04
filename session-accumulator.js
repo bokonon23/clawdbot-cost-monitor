@@ -97,8 +97,8 @@ function accumulateSessions(currentAnalysis) {
       const sessionId = session.key;
       activeSessions[sessionId] = true;
       
-      // If we've never seen this session before, or if costs have increased
-      if (!seenSessions[sessionId] || seenSessions[sessionId].cost < session.cost) {
+      // If we've never seen this session before, or if data has changed
+      if (!seenSessions[sessionId] || seenSessions[sessionId].cost !== session.cost) {
         seenSessions[sessionId] = {
           key: sessionId,
           model: session.model,

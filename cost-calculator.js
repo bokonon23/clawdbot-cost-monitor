@@ -36,6 +36,13 @@ const MODEL_PRICING = {
     cacheWrite: 3.75,
     cacheRead: 0.30
   },
+  'google/gemini-2.5-flash': {
+  input: 0.30,     // text/image/video standard
+  output: 2.50,
+  // If caching is used in your setup:
+  cacheWrite: 0.375,  // example; actual is often lower
+  cacheRead: 0.03
+  },
   'openai/gpt-4': { input: 30.00, output: 60.00 },
   'openai/gpt-4-turbo': { input: 10.00, output: 30.00 },
   'openai/gpt-3.5-turbo': { input: 0.50, output: 1.50 },
@@ -49,9 +56,14 @@ const DEFAULT_PRICING = {
   cacheRead: 0.30
 };
 
-function getSessionsPath() {
+function getSessionsDirPath() {
   const homeDir = os.homedir();
-  return path.join(homeDir, '.clawdbot', 'agents', 'main', 'sessions', 'sessions.json');
+  return path.join(homeDir, '.openclaw', 'agents', 'main', 'sessions');
+}
+
+function parseJsonlFile(filePath) {
+  const fileContent = fs.readFileSync(filePath, 'utf8');
+  return fileContent.split('\n').filter(line => line.trim() !== '').map(JSON.parse);
 }
 
 function calculateCost(tokenBreakdown, model) {
@@ -85,16 +97,63 @@ function calculateCost(tokenBreakdown, model) {
 
 function readSessionData() {
   try {
-    const sessionsPath = getSessionsPath();
-    
-    if (!fs.existsSync(sessionsPath)) {
-      return { error: 'Sessions file not found. Is OpenClaw (Clawdbot) running?' };
+    const sessionsDirPath = getSessionsDirPath();
+
+    if (!fs.existsSync(sessionsDirPath)) {
+      return { error: 'Sessions directory not found. Is OpenClaw (Clawdbot) running?' };
     }
-    
-    const data = fs.readFileSync(sessionsPath, 'utf8');
-    const sessions = JSON.parse(data);
-    
-    return { sessions };
+
+    const sessionFiles = fs.readdirSync(sessionsDirPath).filter(file => file.endsWith('.jsonl'));
+    const allSessions = {}; // To store aggregated data for each session
+
+    for (const file of sessionFiles) {
+      const sessionKey = file.replace('.jsonl', ''); // Extract session key from filename
+      const filePath = path.join(sessionsDirPath, file);
+      const events = parseJsonlFile(filePath);
+
+      let sessionData = {
+        inputTokens: 0,
+        outputTokens: 0,
+        cacheWriteTokens: 0,
+        cacheReadTokens: 0,
+        totalTokens: 0,
+        model: 'unknown',
+        modelProvider: 'unknown',
+        updatedAt: 0,
+        key: sessionKey // Add session key to sessionData
+      };
+
+      for (const event of events) {
+        if (event.type === 'message' && event.message && event.message.role === 'assistant' && event.message.usage) {
+          const usage = event.message.usage;
+          sessionData.inputTokens += usage.input || 0;
+          sessionData.outputTokens += usage.output || 0;
+          sessionData.cacheWriteTokens += usage.cacheWrite || 0;
+          sessionData.cacheReadTokens += usage.cacheRead || 0;
+          sessionData.totalTokens += usage.totalTokens || 0;
+          if (event.message.model) {
+            sessionData.model = event.message.model;
+          }
+          if (event.message.provider) { // Provider field is often at the top level of message
+            sessionData.modelProvider = event.message.provider;
+          } else if (event.message.api) { // Fallback for some models where api is provider
+            sessionData.modelProvider = event.message.api.split('-')[0]; // e.g., anthropic-messages -> anthropic
+          }
+          if (event.timestamp) {
+            sessionData.updatedAt = Math.max(sessionData.updatedAt, new Date(event.timestamp).getTime());
+          }
+        } else if (event.type === 'model_change' && event.modelId) {
+            sessionData.model = event.modelId;
+            sessionData.modelProvider = event.provider;
+        }
+      }
+      allSessions[sessionKey] = sessionData;
+    }
+
+    // Convert the allSessions object to an array of sessions, matching the expected format
+    const sessionsArray = Object.values(allSessions);
+
+    return { sessions: sessionsArray };
   } catch (error) {
     return { error: `Failed to read sessions: ${error.message}` };
   }
@@ -120,12 +179,13 @@ function analyzeUsage() {
     sessions: []
   };
   
-  for (const [sessionKey, session] of Object.entries(sessions)) {
+  for (const session of sessions) {
+    const sessionKey = session.key;
     // Extract token counts
     let inputTokens = session.inputTokens || 0;
     let outputTokens = session.outputTokens || 0;
-    let cacheWriteTokens = session.cacheCreationInputTokens || 0;
-    let cacheReadTokens = session.cacheReadInputTokens || 0;
+    let cacheWriteTokens = session.cacheWriteTokens || 0;
+    let cacheReadTokens = session.cacheReadTokens || 0;
     
     // Handle case where cache tokens aren't separately tracked
     // If totalTokens > (inputTokens + outputTokens), the difference is likely cache reads
