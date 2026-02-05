@@ -1,15 +1,17 @@
 # 💰 OpenClaw Cost Monitor
 
-### **Beautiful real-time AI cost tracking with LIFETIME accumulation**
+### **Beautiful real-time AI cost tracking with full message history parsing**
 
-Track your OpenClaw (formerly Clawdbot) AI spending with a **stunning dark-theme dashboard**. Get accurate lifetime costs, understand your token usage, and see exactly how much you're saving with prompt caching.
+Track your OpenClaw or Claude Code AI spending with a **stunning dark-theme dashboard**. Get accurate lifetime costs by parsing JSONL session files, understand your token usage, and see exactly how much you're saving with prompt caching.
 
-**NEW in v0.5.0:** 🎯 **Lifetime cost tracking!** Never lose historical data again. Tracks all sessions from installation forward.
+**NEW in v0.6.0:** 📊 **JSONL parsing!** Now reads full message history from session files for accurate cost tracking. Validated against Claude Console - matches within $2!
+
+**v0.5.0:** 🎯 Lifetime cost tracking - never lose historical data again.
 
 **v0.4.0:** Complete UI redesign with modern glassmorphism, smooth animations, and professional polish! 🎨
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-0.5.0-blue.svg)](https://github.com/bokonon23/clawdbot-cost-monitor)
+[![Version](https://img.shields.io/badge/version-0.6.0-blue.svg)](https://github.com/bokonon23/clawdbot-cost-monitor)
 [![Node](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen.svg)](https://nodejs.org/)
 
 ![Dashboard Screenshot](screenshots/dashboard.png)
@@ -78,21 +80,27 @@ npm start
 Then open **http://localhost:3939** in your browser. That's it!
 
 The dashboard automatically:
-- Detects your OpenClaw installation
-- Reads session data from `~/.clawdbot/agents/main/sessions/sessions.json`
-- Updates costs in real-time (every 5 seconds)
-- Shows prompt caching savings
+- Detects your OpenClaw or Claude Code installation
+- Parses JSONL session files for complete message history
+- Calculates costs from every single API call
+- Updates in real-time (every 30 seconds)
+- Shows prompt caching savings with per-model pricing
 
 **No configuration required.** Just run it.
 
 ## How It Works
 
-1. Reads your OpenClaw session data from `~/.clawdbot/agents/main/sessions/sessions.json`
-2. Calculates costs based on official model pricing **including prompt caching discounts**
-3. Displays everything in a clean, real-time dashboard
-4. Updates automatically as you use OpenClaw
+1. **Finds JSONL session files** from:
+   - OpenClaw: `~/.openclaw/agents/main/sessions/*.jsonl`
+   - Claude Code: `~/.claude/projects/**/*.jsonl`
+2. **Parses every message** with usage data (tokens + costs)
+3. **Uses pre-calculated costs** from OpenClaw when available, or calculates with correct per-model pricing
+4. **Aggregates by day and model** for detailed analytics
+5. **Updates in real-time** as you use the AI
 
-**Note:** Works with both OpenClaw and legacy Clawdbot installations - the session file format is the same.
+**Supports both formats:**
+- OpenClaw: `usage.input`, `usage.output`, `usage.cacheRead`, `usage.cacheWrite`, `usage.cost.total`
+- Claude Code: `usage.input_tokens`, `usage.output_tokens`, `usage.cache_read_input_tokens`, etc.
 
 ## Why Your Costs Are Lower Than Expected 💚
 
@@ -128,31 +136,45 @@ If you were using the old version (v0.2.x or earlier), costs were **overestimate
 
 ## Supported Models
 
-- Claude Sonnet 4/4.5
-- Claude Opus 4
-- GPT-4/GPT-4 Turbo
-- GPT-3.5 Turbo
-- And more...
+| Model | Input | Output | Cache Write | Cache Read |
+|-------|-------|--------|-------------|------------|
+| Claude Opus 4.5 | $15/M | $75/M | $18.75/M | $1.50/M |
+| Claude Sonnet 4.5 | $3/M | $15/M | $3.75/M | $0.30/M |
+| Claude Haiku 4.5 | $0.80/M | $4/M | $1.00/M | $0.08/M |
+| GPT-4 | $30/M | $60/M | - | - |
+| GPT-4 Turbo | $10/M | $30/M | - | - |
+| GPT-3.5 Turbo | $0.50/M | $1.50/M | - | - |
+
+*Prices per million tokens. Cache pricing reflects Anthropic's 90% discount on cached reads.*
 
 ## 📋 Requirements
 
 - **Node.js 14+** (16+ recommended)
-- **OpenClaw or Clawdbot** installed and running
-- Sessions file at `~/.clawdbot/agents/main/sessions/sessions.json`
+- **OpenClaw or Claude Code** installed with session history
+- Session files in one of these locations:
+  - OpenClaw: `~/.openclaw/agents/main/sessions/*.jsonl`
+  - Claude Code: `~/.claude/projects/**/*.jsonl`
 
 ## 🐛 Troubleshooting
 
-**"Error: Sessions file not found"**
-- Make sure OpenClaw/Clawdbot is installed and has run at least once
-- Check that the path `~/.clawdbot/agents/main/sessions/sessions.json` exists
+**"No session files found"**
+- Make sure OpenClaw or Claude Code has run at least once
+- Check that JSONL files exist:
+  - OpenClaw: `ls ~/.openclaw/agents/main/sessions/*.jsonl`
+  - Claude Code: `find ~/.claude/projects -name "*.jsonl"`
 
-**"Costs seem wrong"**
-- Make sure you're on **v0.3.0 or later** (accurate caching support)
-- Check GitHub for the latest version: `git pull origin main`
+**"Costs don't match Claude Console"**
+- The dashboard shows ALL historical data, not just the current billing period
+- Check the daily breakdown to see costs per day
+- Make sure you're on **v0.6.0 or later** (JSONL parsing)
 
 **"Connection error / Won't connect"**
 - Port 3939 might be in use. Check with: `lsof -i :3939`
 - Kill the process and restart: `npm start`
+
+**"WSL: localhost doesn't work"**
+- Use the WSL IP directly: `hostname -I` to get the IP
+- Or set up port forwarding in Windows
 
 **Still stuck?** [Open an issue](https://github.com/bokonon23/clawdbot-cost-monitor/issues) with details!
 
@@ -192,6 +214,16 @@ If this tool helps you track costs and save money:
 Every star helps others discover this tool! 🙏
 
 ## 📝 Version History
+
+### v0.6.0 (Feb 5, 2026) - JSONL Parsing 📊
+- **MAJOR:** Parse JSONL session files for accurate cost tracking
+- Reads full message history instead of session summaries
+- Supports both OpenClaw and Claude Code session formats
+- Uses pre-calculated costs from OpenClaw when available
+- Daily cost breakdown (byDay) for historical analysis
+- Correct per-model pricing (Opus, Sonnet, Haiku)
+- Validated against Claude Console: $145.87 calculated vs $119.49 for Feb 1-5 (difference is Jan 27-31 data)
+- Async JSONL parsing for better performance
 
 ### v0.5.0 (Feb 2, 2026) - Lifetime Tracking 🎯
 - **MAJOR:** Persistent session tracking across restarts
