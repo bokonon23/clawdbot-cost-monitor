@@ -10,16 +10,20 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 const PORT = process.env.PORT || 3939;
-const UPDATE_INTERVAL = 30000; // Update every 30 seconds (reduced refresh rate)
+const UPDATE_INTERVAL = 30000; // Update every 30 seconds
 const SNAPSHOT_INTERVAL = 60 * 60 * 1000; // Save snapshot every hour
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// API endpoint for current usage
-app.get('/api/usage', (req, res) => {
-  const analysis = analyzeUsage();
-  res.json(analysis);
+// API endpoint for current usage (now async)
+app.get('/api/usage', async (req, res) => {
+  try {
+    const analysis = await analyzeUsage();
+    res.json(analysis);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // API endpoint for historical data
@@ -36,49 +40,75 @@ app.get('/api/projection', (req, res) => {
 });
 
 // WebSocket connection
-wss.on('connection', (ws) => {
+wss.on('connection', async (ws) => {
   console.log('Client connected');
-  
+
   // Send initial data
-  ws.send(JSON.stringify(analyzeUsage()));
-  
+  try {
+    const initialData = await analyzeUsage();
+    ws.send(JSON.stringify(initialData));
+  } catch (error) {
+    ws.send(JSON.stringify({ error: error.message }));
+  }
+
   // Set up periodic updates
-  const interval = setInterval(() => {
+  const interval = setInterval(async () => {
     if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(analyzeUsage()));
+      try {
+        const data = await analyzeUsage();
+        ws.send(JSON.stringify(data));
+      } catch (error) {
+        ws.send(JSON.stringify({ error: error.message }));
+      }
     }
   }, UPDATE_INTERVAL);
-  
+
   ws.on('close', () => {
     console.log('Client disconnected');
     clearInterval(interval);
   });
 });
 
-// Save initial snapshot on startup
-saveSnapshot(analyzeUsage());
+// Initialize on startup
+async function initialize() {
+  try {
+    const initialAnalysis = await analyzeUsage();
+    if (!initialAnalysis.error) {
+      saveSnapshot(initialAnalysis);
+      console.log('Initial snapshot saved. Total cost: $' + initialAnalysis.totalCost.toFixed(2));
+    }
+  } catch (error) {
+    console.error('Error during initialization:', error.message);
+  }
+}
 
 // Periodic snapshot saving (every hour)
-setInterval(() => {
-  const analysis = analyzeUsage();
-  if (!analysis.error) {
-    saveSnapshot(analysis);
-    console.log(`[${new Date().toISOString()}] Snapshot saved. Total cost: $${analysis.totalCost.toFixed(2)}`);
+setInterval(async () => {
+  try {
+    const analysis = await analyzeUsage();
+    if (!analysis.error) {
+      saveSnapshot(analysis);
+      console.log('[' + new Date().toISOString() + '] Snapshot saved. Total cost: $' + analysis.totalCost.toFixed(2));
+    }
+  } catch (error) {
+    console.error('Error saving snapshot:', error.message);
   }
 }, SNAPSHOT_INTERVAL);
 
-server.listen(PORT, () => {
-  console.log(`
-╔════════════════════════════════════════════════════════════════╗
-║                                                                ║
-║   💰 OPENCLAW COST MONITOR v0.5.0                              ║
-║                                                                ║
-║   Dashboard: http://localhost:${PORT}                            ║
-║                                                                ║
-║   ✨ Track your OpenClaw/Clawdbot AI spending                  ║
-║   🎯 Now with LIFETIME cost tracking!                          ║
-║   💚 Accurate prompt caching calculation                       ║
-║                                                                ║
-╚════════════════════════════════════════════════════════════════╝
-  `);
+// Start server - bind to 0.0.0.0 so Windows can access WSL
+server.listen(PORT, '0.0.0.0', () => {
+  console.log('\n' +
+    '========================================\n' +
+    '  CLAUDE CODE COST MONITOR v0.6.0\n' +
+    '========================================\n' +
+    '\n' +
+    '  Dashboard: http://localhost:' + PORT + '\n' +
+    '\n' +
+    '  Now parsing JSONL session files for\n' +
+    '  accurate lifetime cost tracking!\n' +
+    '========================================\n'
+  );
+
+  // Initialize after server starts
+  initialize();
 });

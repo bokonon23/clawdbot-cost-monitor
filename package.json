@@ -1,7 +1,7 @@
 {
-  "name": "openclaw-cost-monitor",
-  "version": "0.5.0",
-  "description": "Track your OpenClaw (Clawdbot) AI costs in real-time",
+  "name": "claude-code-cost-monitor",
+  "version": "0.6.0",
+  "description": "Track your Claude Code AI costs in real-time by parsing JSONL session files",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

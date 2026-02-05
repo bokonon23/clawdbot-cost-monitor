@@ -230,7 +230,7 @@ function renderData(data) {
       <div class="chart-card">
         <h2 style="color: #ef4444;">⚠️ Error</h2>
         <p style="color: #94a3b8; margin-top: 15px;">${data.error}</p>
-        <p style="color: #94a3b8; margin-top: 10px;">Make sure OpenClaw (Clawdbot) is running and sessions.json exists.</p>
+        <p style="color: #94a3b8; margin-top: 10px;">Make sure Claude Code is installed and has session data in ~/.claude/projects/</p>
       </div>
     `;
     return;
@@ -240,12 +240,12 @@ function renderData(data) {
                       data.totalCacheReadTokens + data.totalCacheWriteTokens;
   const budget = getBudget();
   
-  // Format tracking start date
-  let trackingSinceText = '';
-  if (data.metadata && data.metadata.trackingSince) {
-    const trackingDate = new Date(data.metadata.trackingSince);
-    trackingSinceText = trackingDate.toLocaleDateString('en-US', { 
-      month: 'short', 
+  // Format tracking info
+  let lastUpdateText = '';
+  if (data.metadata && data.metadata.lastUpdate) {
+    const updateDate = new Date(data.metadata.lastUpdate);
+    lastUpdateText = updateDate.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
@@ -256,20 +256,20 @@ function renderData(data) {
   let html = '';
   
   // Tracking info banner
-  if (data.metadata && data.metadata.trackingSince) {
+  if (data.metadata) {
     html += `
       <div class="stat-card" style="background: rgba(102, 126, 234, 0.1); border-color: rgba(102, 126, 234, 0.3); margin-bottom: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div>
-            <div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 5px;">📊 TRACKING LIFETIME COSTS</div>
+            <div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 5px;">📊 PARSING JSONL SESSION FILES</div>
             <div style="font-size: 1rem; color: #f1f5f9;">
-              Started tracking: <strong>${trackingSinceText}</strong>
+              Found <strong>${data.metadata.jsonlFilesFound || 0}</strong> session files with <strong>${data.metadata.totalMessages || 0}</strong> messages
             </div>
           </div>
           <div style="text-align: right;">
-            <div style="font-size: 0.85rem; color: #94a3b8;">Sessions tracked</div>
+            <div style="font-size: 0.85rem; color: #94a3b8;">Sessions with data</div>
             <div style="font-size: 1.5rem; font-weight: 700; color: #667eea;">
-              ${data.metadata.totalSessionsSeen || 0}
+              ${data.metadata.sessionsWithData || 0}
             </div>
           </div>
         </div>
@@ -293,10 +293,9 @@ function renderData(data) {
     `;
   }
   
-  // Calculate savings from caching
-  const costWithoutCaching = ((data.totalInputTokens + data.totalCacheReadTokens) / 1_000_000) * 3.00 + 
-                             (data.totalOutputTokens / 1_000_000) * 15.00;
-  const savingsFromCaching = costWithoutCaching - data.totalCost;
+  // Use caching savings from API (calculated with correct per-model pricing)
+  const costWithoutCaching = data.costWithoutCaching || 0;
+  const savingsFromCaching = data.cachingSavings || 0;
   const savingsPercent = costWithoutCaching > 0 ? ((savingsFromCaching / costWithoutCaching) * 100) : 0;
   
   // Show caching savings card
@@ -309,8 +308,8 @@ function renderData(data) {
             ${formatCost(savingsFromCaching)} saved
           </div>
           <div class="savings-details">
-            You've saved <strong>${savingsPercent.toFixed(0)}% on costs</strong> thanks to prompt caching! 
-            Clawdbot stores your conversation history and reuses it at a <strong>90% discount</strong> 
+            You've saved <strong>${savingsPercent.toFixed(0)}% on costs</strong> thanks to prompt caching!
+            Claude Code stores your conversation history and reuses it at a <strong>90% discount</strong>
             instead of sending it fresh every time.
             <div class="savings-breakdown">
               <div class="breakdown-item">
@@ -396,23 +395,24 @@ function renderData(data) {
       const percentage = ((stats.cost / data.totalCost) * 100).toFixed(1);
       const totalModelTokens = stats.inputTokens + stats.outputTokens + 
                                stats.cacheReadTokens + stats.cacheWriteTokens;
-      const avgCostPerConvo = stats.sessions > 0 ? (stats.cost / stats.sessions) : 0;
-      
+      const sessions = stats.sessions || 1;
+      const avgCostPerSession = sessions > 0 ? (stats.cost / sessions) : 0;
+
       const displayName = model.replace('anthropic/', '').replace('openai/', '');
-      
+
       let tokenInfo = `${formatTokens(totalModelTokens)} tokens`;
       if (stats.cacheReadTokens > 0) {
         tokenInfo += ` (${formatTokens(stats.cacheReadTokens)} cached)`;
       }
-      
+
       html += `
         <div class="model-item">
           <div class="model-info">
             <div class="model-name">${displayName}</div>
             <div class="model-meta">
-              ${stats.sessions} conversation${stats.sessions !== 1 ? 's' : ''} · 
-              ${tokenInfo} · 
-              Avg ${formatCost(avgCostPerConvo)}/chat
+              ${stats.messageCount || 0} messages in ${sessions} session${sessions !== 1 ? 's' : ''} ·
+              ${tokenInfo} ·
+              Avg ${formatCost(avgCostPerSession)}/session
             </div>
           </div>
           <div class="model-stats">
