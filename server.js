@@ -10,6 +10,7 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 const PORT = process.env.PORT || 3939;
+const HOST = process.env.HOST || '127.0.0.1'; // Default to localhost for security
 const UPDATE_INTERVAL = 30000; // Update every 30 seconds
 const SNAPSHOT_INTERVAL = 60 * 60 * 1000; // Save snapshot every hour
 
@@ -95,14 +96,15 @@ setInterval(async () => {
   }
 }, SNAPSHOT_INTERVAL);
 
-// Start server - bind to 0.0.0.0 so Windows can access WSL
-server.listen(PORT, '0.0.0.0', () => {
+// Start server - bind to localhost by default for security
+// Set HOST=0.0.0.0 to allow network access (e.g., WSL from Windows)
+server.listen(PORT, HOST, () => {
   console.log('\n' +
     '========================================\n' +
     '  CLAUDE CODE COST MONITOR v0.6.0\n' +
     '========================================\n' +
     '\n' +
-    '  Dashboard: http://localhost:' + PORT + '\n' +
+    '  Dashboard: http://' + HOST + ':' + PORT + '\n' +
     '\n' +
     '  Now parsing JSONL session files for\n' +
     '  accurate lifetime cost tracking!\n' +
