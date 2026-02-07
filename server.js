@@ -34,6 +34,22 @@ app.get('/api/history', (req, res) => {
   res.json(stats);
 });
 
+// API endpoint for plan usage (Max Pro scraped data)
+app.get('/api/plan-usage', (req, res) => {
+  const usageFile = path.join(__dirname, 'data', 'plan-usage.json');
+  try {
+    if (require('fs').existsSync(usageFile)) {
+      const history = JSON.parse(require('fs').readFileSync(usageFile, 'utf8'));
+      const latest = history.length > 0 ? history[history.length - 1] : null;
+      res.json({ latest, history });
+    } else {
+      res.json({ latest: null, history: [], message: 'No plan usage data yet. Run usage-scraper.js to collect data.' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // API endpoint for monthly projection
 app.get('/api/projection', (req, res) => {
   const projection = getMonthlyProjection();
