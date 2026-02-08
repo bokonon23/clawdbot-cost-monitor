@@ -88,6 +88,20 @@ The dashboard automatically:
 
 **No configuration required.** Just run it.
 
+### Optional Configuration
+
+Environment variables for customization:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `3939` | Port for the dashboard |
+| `HOST` | `127.0.0.1` | Bind address (localhost only by default for security) |
+
+To allow network access (e.g., WSL from Windows host):
+```bash
+HOST=0.0.0.0 npm start
+```
+
 ## How It Works
 
 1. **Finds JSONL session files** from:

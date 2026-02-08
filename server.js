@@ -10,6 +10,7 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 const PORT = process.env.PORT || 3939;
+const HOST = process.env.HOST || '127.0.0.1'; // Default to localhost for security
 const UPDATE_INTERVAL = 30000; // Update every 30 seconds
 const SNAPSHOT_INTERVAL = 60 * 60 * 1000; // Save snapshot every hour
 
@@ -31,6 +32,22 @@ app.get('/api/history', (req, res) => {
   const days = parseInt(req.query.days) || 7;
   const stats = getDailyStats(days);
   res.json(stats);
+});
+
+// API endpoint for plan usage (Max Pro scraped data)
+app.get('/api/plan-usage', (req, res) => {
+  const usageFile = path.join(__dirname, 'data', 'plan-usage.json');
+  try {
+    if (require('fs').existsSync(usageFile)) {
+      const history = JSON.parse(require('fs').readFileSync(usageFile, 'utf8'));
+      const latest = history.length > 0 ? history[history.length - 1] : null;
+      res.json({ latest, history });
+    } else {
+      res.json({ latest: null, history: [], message: 'No plan usage data yet. Run usage-scraper.js to collect data.' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // API endpoint for monthly projection
@@ -95,14 +112,15 @@ setInterval(async () => {
   }
 }, SNAPSHOT_INTERVAL);
 
-// Start server - bind to 0.0.0.0 so Windows can access WSL
-server.listen(PORT, '0.0.0.0', () => {
+// Start server - bind to localhost by default for security
+// Set HOST=0.0.0.0 to allow network access (e.g., WSL from Windows)
+server.listen(PORT, HOST, () => {
   console.log('\n' +
     '========================================\n' +
     '  CLAUDE CODE COST MONITOR v0.6.0\n' +
     '========================================\n' +
     '\n' +
-    '  Dashboard: http://localhost:' + PORT + '\n' +
+    '  Dashboard: http://' + HOST + ':' + PORT + '\n' +
     '\n' +
     '  Now parsing JSONL session files for\n' +
     '  accurate lifetime cost tracking!\n' +
