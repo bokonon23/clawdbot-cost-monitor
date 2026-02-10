@@ -88,6 +88,29 @@ The dashboard automatically:
 
 **No configuration required.** Just run it.
 
+## 🛠️ Run as a macOS Service (Launch at Login + Auto-Restart)
+
+Want the dashboard to start automatically when your Mac boots and restart if it crashes? Use the built-in LaunchAgent:
+
+```bash
+npm run service:install
+```
+
+That will:
+- Install a LaunchAgent at `~/Library/LaunchAgents/com.openclaw.cost-monitor.plist`
+- Start it immediately
+- Restart it automatically on crash
+
+To uninstall:
+
+```bash
+npm run service:uninstall
+```
+
+Logs:
+- `~/Library/Logs/openclaw-cost-monitor.log`
+- `~/Library/Logs/openclaw-cost-monitor.error.log`
+
 ## How It Works
 
 1. **Finds JSONL session files** from:
