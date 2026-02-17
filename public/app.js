@@ -293,44 +293,11 @@ function renderData(data) {
     `;
   }
   
-  // Use caching savings from API (calculated with correct per-model pricing)
+  // Calculate caching savings (rendered later, after model breakdown)
   const costWithoutCaching = data.costWithoutCaching || 0;
   const savingsFromCaching = data.cachingSavings || 0;
   const savingsPercent = costWithoutCaching > 0 ? ((savingsFromCaching / costWithoutCaching) * 100) : 0;
-  
-  // Show caching savings card
-  if (data.totalCacheReadTokens > 0 && savingsFromCaching > 0.10) {
-    html += `
-      <div class="stat-card savings-card">
-        <div class="savings-content">
-          <h2>💚 Prompt Caching Savings</h2>
-          <div class="savings-amount">
-            ${formatCost(savingsFromCaching)} saved
-          </div>
-          <div class="savings-details">
-            You've saved <strong>${savingsPercent.toFixed(0)}% on costs</strong> thanks to prompt caching!
-            Claude Code stores your conversation history and reuses it at a <strong>90% discount</strong>
-            instead of sending it fresh every time.
-            <div class="savings-breakdown">
-              <div class="breakdown-item">
-                <span>📥 New input</span>
-                <span>${formatTokens(data.totalInputTokens)} tokens</span>
-              </div>
-              <div class="breakdown-item">
-                <span>📤 AI responses</span>
-                <span>${formatTokens(data.totalOutputTokens)} tokens</span>
-              </div>
-              <div class="breakdown-item">
-                <span>⚡ Cached reads (90% off!)</span>
-                <span>${formatTokens(data.totalCacheReadTokens)} tokens</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-  
+
   // Stats cards
   html += `
     <div class="stats-grid">
@@ -425,7 +392,20 @@ function renderData(data) {
     
     html += `</div>`;
   }
-  
+
+  // Compact caching savings (below model breakdown)
+  if (data.totalCacheReadTokens > 0 && savingsFromCaching > 0.10) {
+    html += `
+      <div class="savings-compact">
+        <span class="savings-compact-icon">💚</span>
+        <span class="savings-compact-text">
+          Prompt caching saved <strong>${formatCost(savingsFromCaching)}</strong> (${savingsPercent.toFixed(0)}% off) &mdash;
+          ${formatTokens(data.totalCacheReadTokens)} cached tokens at 90% discount
+        </span>
+      </div>
+    `;
+  }
+
   document.getElementById('content').innerHTML = html;
   
   // Re-render chart and projection

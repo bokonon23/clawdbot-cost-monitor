@@ -79,18 +79,25 @@ function getDailyStats(days = 7) {
   });
   
   // Calculate daily totals (max for each day = end of day)
-  const dailyStats = Object.values(dailyMap).map(day => {
+  const sortedDays = Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
+
+  const dailyStats = sortedDays.map((day, index) => {
     const lastSnapshot = day.snapshots[day.snapshots.length - 1];
     const firstSnapshot = day.snapshots[0];
-    
+
+    // First day of tracked history: show totalCost since there's no prior day
+    const dailyCost = index === 0
+      ? lastSnapshot.totalCost
+      : lastSnapshot.totalCost - (firstSnapshot.totalCost || 0);
+
     return {
       date: day.date,
-      cost: lastSnapshot.totalCost - (firstSnapshot.totalCost || 0),
+      cost: dailyCost,
       totalCost: lastSnapshot.totalCost,
-      tokens: (lastSnapshot.totalInputTokens + lastSnapshot.totalOutputTokens) - 
+      tokens: (lastSnapshot.totalInputTokens + lastSnapshot.totalOutputTokens) -
               (firstSnapshot.totalInputTokens + firstSnapshot.totalOutputTokens)
     };
-  }).sort((a, b) => a.date.localeCompare(b.date));
+  });
   
   return dailyStats;
 }

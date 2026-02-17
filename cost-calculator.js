@@ -64,6 +64,13 @@ const MODEL_PRICING = {
     cacheWrite: 3.75,
     cacheRead: 0.30
   },
+  // Gemini
+  'google/gemini-2.5-flash': {
+    input: 0.30,
+    output: 2.50,
+    cacheWrite: 0,
+    cacheRead: 0
+  },
   'openai/gpt-4': { input: 30.00, output: 60.00, cacheWrite: 0, cacheRead: 0 },
   'openai/gpt-4-turbo': { input: 10.00, output: 30.00, cacheWrite: 0, cacheRead: 0 },
   'openai/gpt-3.5-turbo': { input: 0.50, output: 1.50, cacheWrite: 0, cacheRead: 0 },
