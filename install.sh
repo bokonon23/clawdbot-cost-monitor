@@ -17,10 +17,14 @@ fi
 echo "✅ Node.js found: $(node --version)"
 echo ""
 
-# Check if Clawdbot is installed
-if ! command -v clawdbot &> /dev/null; then
-    echo "⚠️  Warning: Clawdbot command not found."
-    echo "   This tool tracks Clawdbot costs. Make sure Clawdbot is installed."
+# Check if OpenClaw/Clawdbot is installed
+if command -v openclaw &> /dev/null; then
+    echo "✅ OpenClaw found"
+elif command -v clawdbot &> /dev/null; then
+    echo "✅ Clawdbot (legacy) found"
+else
+    echo "⚠️  Warning: Neither openclaw nor clawdbot command found."
+    echo "   This tool tracks OpenClaw/Clawdbot costs. Make sure one is installed."
     echo ""
 fi
 

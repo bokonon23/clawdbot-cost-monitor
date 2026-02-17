@@ -85,18 +85,16 @@ const DEFAULT_PRICING = {
 };
 
 /**
- * Get the OpenClaw sessions directory path
- * OpenClaw stores full message history in JSONL files here
+ * Get all candidate session directory paths
+ * Searches both old (.clawdbot) and new (.openclaw) paths after the rename,
+ * plus the Claude Code projects path as a fallback.
  */
-function getOpenClawSessionsPath() {
-  return path.join(os.homedir(), '.openclaw', 'agents', 'main', 'sessions');
-}
-
-/**
- * Get the Claude Code projects directory path (fallback)
- */
-function getClaudeProjectsPath() {
-  return path.join(os.homedir(), '.claude', 'projects');
+function getSessionSearchPaths() {
+  return [
+    path.join(os.homedir(), '.openclaw', 'agents', 'main', 'sessions'),
+    path.join(os.homedir(), '.clawdbot', 'agents', 'main', 'sessions'),
+    path.join(os.homedir(), '.claude', 'projects'),
+  ];
 }
 
 /**
@@ -247,29 +245,32 @@ function calculateCost(tokenBreakdown, model) {
  * Analyze all OpenClaw/Claude Code usage from JSONL files
  */
 async function analyzeUsage() {
-  // Try OpenClaw path first (Ubuntu server), then Claude Code path (local)
-  const openclawPath = getOpenClawSessionsPath();
-  const claudePath = getClaudeProjectsPath();
+  // Search all candidate paths: .openclaw (new), .clawdbot (legacy), .claude (fallback)
+  const searchPaths = getSessionSearchPaths();
 
   let jsonlFiles = [];
-  let sourcePath = '';
+  const seenFiles = new Set();
+  const sourcePaths = [];
 
-  if (fs.existsSync(openclawPath)) {
-    jsonlFiles = findJsonlFiles(openclawPath);
-    sourcePath = openclawPath;
+  for (const searchPath of searchPaths) {
+    if (fs.existsSync(searchPath)) {
+      const found = findJsonlFiles(searchPath);
+      for (const f of found) {
+        if (!seenFiles.has(f)) {
+          seenFiles.add(f);
+          jsonlFiles.push(f);
+        }
+      }
+      if (found.length > 0) {
+        sourcePaths.push(searchPath);
+      }
+    }
   }
 
-  if (jsonlFiles.length === 0 && fs.existsSync(claudePath)) {
-    jsonlFiles = findJsonlFiles(claudePath);
-    sourcePath = claudePath;
-  }
+  const sourcePath = sourcePaths[0] || '';
 
   if (jsonlFiles.length === 0) {
-    return { error: 'No session files found. Check ~/.openclaw/agents/main/sessions/ or ~/.claude/projects/' };
-  }
-
-  if (jsonlFiles.length === 0) {
-    return { error: 'No session files found. Start using Claude Code to generate usage data.' };
+    return { error: 'No session files found. Check ~/.openclaw/agents/main/sessions/, ~/.clawdbot/agents/main/sessions/, or ~/.claude/projects/' };
   }
 
   // Parse all JSONL files
