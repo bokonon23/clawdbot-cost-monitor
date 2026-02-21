@@ -2,6 +2,8 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
+const cookieParser = require('cookie-parser');
+const csurf = require('csurf');
 const { analyzeUsage } = require('./cost-calculator');
 const { saveSnapshot, getDailyStats, getMonthlyProjection } = require('./history-tracker');
 const { buildTimeline } = require('./timeline-analyzer');
@@ -17,8 +19,26 @@ const HOST = process.env.HOST || '127.0.0.1'; // Default to localhost for securi
 const UPDATE_INTERVAL = 30000; // Update every 30 seconds
 const SNAPSHOT_INTERVAL = 60 * 60 * 1000; // Save snapshot every hour
 
+// Basic middleware
+app.use(cookieParser());
+
+// CSRF protection (safe methods exempt by csurf defaults)
+const csrfProtection = csurf({
+  cookie: {
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: process.env.NODE_ENV === 'production'
+  }
+});
+app.use(csrfProtection);
+
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
+
+// CSRF token endpoint for clients making state-changing requests
+app.get('/api/csrf-token', (req, res) => {
+  res.json({ csrfToken: req.csrfToken() });
+});
 
 // API endpoint for current usage (now async)
 app.get('/api/usage', async (req, res) => {
@@ -147,6 +167,14 @@ setInterval(async () => {
     console.error('Error saving snapshot:', error.message);
   }
 }, SNAPSHOT_INTERVAL);
+
+// CSRF error handler
+app.use((err, req, res, next) => {
+  if (err && err.code === 'EBADCSRFTOKEN') {
+    return res.status(403).json({ error: 'Invalid CSRF token' });
+  }
+  return next(err);
+});
 
 // Start server - bind to localhost by default for security
 // Set HOST=0.0.0.0 to allow network access (e.g., WSL from Windows)

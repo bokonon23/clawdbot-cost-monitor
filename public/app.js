@@ -3,6 +3,23 @@ let costChart = null;
 let timelineChart = null;
 let activeTimelineWindow = '7d';
 
+function sanitizeHtml(html) {
+  if (window.DOMPurify) {
+    return window.DOMPurify.sanitize(String(html), { USE_PROFILES: { html: true } });
+  }
+  return String(html)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function setSafeHTML(el, html) {
+  el.innerHTML = sanitizeHtml(html);
+}
+
+
 // Load budget from localStorage (default $50)
 function getBudget() {
   const saved = localStorage.getItem('monthlyBudget');
@@ -268,7 +285,7 @@ function renderCronUsage(data) {
     }
   }
 
-  el.innerHTML = html;
+  setSafeHTML(el, html);
 }
 
 async function loadDailyBreakdown(days = 7) {
@@ -312,7 +329,7 @@ function renderDailyBreakdown(data) {
   }
 
   html += '</tbody></table></div>';
-  el.innerHTML = html;
+  setSafeHTML(el, html);
 }
 
 async function loadTimeline(windowKey = activeTimelineWindow) {
@@ -450,9 +467,10 @@ function renderProjection(projection) {
     const contentDiv = document.getElementById('content');
     const existingAlert = contentDiv.querySelector('.alert');
     if (existingAlert) {
-      existingAlert.outerHTML = alertHtml;
+      existingAlert.insertAdjacentHTML('beforebegin', sanitizeHtml(alertHtml));
+      existingAlert.remove();
     } else {
-      contentDiv.insertAdjacentHTML('afterbegin', alertHtml);
+      contentDiv.insertAdjacentHTML('afterbegin', sanitizeHtml(alertHtml));
     }
   }
 }
@@ -476,13 +494,14 @@ function estimatePlanAdjustedCost(byModel = {}) {
 
 function renderData(data) {
   if (data.error) {
-    document.getElementById('content').innerHTML = `
+    const content = document.getElementById('content');
+    setSafeHTML(content, `
       <div class="chart-card">
         <h2 style="color: #ef4444;">⚠️ Error</h2>
         <p style="color: #94a3b8; margin-top: 15px;">${data.error}</p>
         <p style="color: #94a3b8; margin-top: 10px;">Make sure Claude Code is installed and has session data in ~/.claude/projects/</p>
       </div>
-    `;
+    `);
     return;
   }
   
@@ -716,7 +735,7 @@ function renderData(data) {
     `;
   }
 
-  document.getElementById('content').innerHTML = html;
+  setSafeHTML(document.getElementById('content'), html);
   
   // Re-render timeline, breakdowns, and projection
   loadTimeline(activeTimelineWindow);

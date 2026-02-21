@@ -9,10 +9,19 @@
     "service:install": "bash scripts/install-macos-service.sh",
     "service:uninstall": "bash scripts/uninstall-macos-service.sh"
   },
-  "keywords": ["openclaw", "clawdbot", "cost", "tracking", "ai", "monitoring"],
+  "keywords": [
+    "openclaw",
+    "clawdbot",
+    "cost",
+    "tracking",
+    "ai",
+    "monitoring"
+  ],
   "author": "B (Blockstrata)",
   "license": "MIT",
   "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "csurf": "^1.11.0",
     "express": "^4.18.2",
     "ws": "^8.16.0"
   },
