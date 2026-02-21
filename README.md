@@ -74,6 +74,11 @@ A **stunning, modern dashboard** with advanced analytics and beautiful UI:
 - ✅ Per-model usage totals from local logs
 - ℹ️ "Remaining" quota status shown as `n/a` unless provider quota APIs are configured
 
+**💳 Plan-Aware Cost View (NEW):**
+- ✅ Shows **API-equivalent cost** and **plan-adjusted marginal cost**
+- ✅ Treats OAuth/subscription-backed lanes as $0 marginal in plan-adjusted view
+- ℹ️ API-key-backed providers remain billable in plan-adjusted estimate
+
 **🎯 Budget Projections:**
 - ✅ Monthly cost projection based on usage
 - ✅ Daily burn rate calculation

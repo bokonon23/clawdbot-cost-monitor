@@ -457,6 +457,23 @@ function renderProjection(projection) {
   }
 }
 
+function estimatePlanAdjustedCost(byModel = {}) {
+  let effective = 0;
+  const notes = [];
+
+  for (const [model, stats] of Object.entries(byModel)) {
+    const cost = Number(stats.cost || 0);
+    // Plan-backed lanes (no marginal API cost in this view)
+    const isPlanBacked = model.startsWith('anthropic/') || model.startsWith('openai-codex/') || model.startsWith('google-gemini-cli/');
+    if (!isPlanBacked) effective += cost;
+  }
+
+  notes.push('Plan-backed providers treated as $0 marginal cost (Anthropic OAuth/Max, OpenAI Codex Pro, Gemini workspace).');
+  notes.push('API-key providers remain billable in this estimate (e.g., anthropic-personal-api, anthropic-work, openai/...).');
+
+  return { effective, notes };
+}
+
 function renderData(data) {
   if (data.error) {
     document.getElementById('content').innerHTML = `
@@ -473,6 +490,7 @@ function renderData(data) {
                       data.totalCacheReadTokens + data.totalCacheWriteTokens;
   const budget = getBudget();
   const budgetEnabled = isBudgetEnabled();
+  const planAdjusted = estimatePlanAdjustedCost(data.byModel || {});
   
   // Format tracking info
   let lastUpdateText = '';
@@ -573,6 +591,15 @@ function renderData(data) {
         <div class="stat-value">${data.sessions.length}</div>
         <div class="stat-subtext">${Object.keys(data.byModel).length} model${Object.keys(data.byModel).length !== 1 ? 's' : ''} in use</div>
       </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon">🧾</div>
+          <div class="stat-label">Plan-Adjusted Cost</div>
+        </div>
+        <div class="stat-value">${formatCost(planAdjusted.effective)}</div>
+        <div class="stat-subtext">API-equivalent: ${formatCost(data.totalCost)}</div>
+      </div>
     </div>
   `;
   
@@ -583,6 +610,13 @@ function renderData(data) {
       </div>
     `;
   }
+
+  html += `
+    <div class="stat-card" style="margin-top: 12px; border-color: rgba(102,126,234,0.25);">
+      <div style="color:#94a3b8; font-size:0.85rem;">${planAdjusted.notes[0]}</div>
+      <div style="color:#94a3b8; font-size:0.85rem; margin-top:4px;">${planAdjusted.notes[1]}</div>
+    </div>
+  `;
 
   // Timeline chart with tabs
   html += `
