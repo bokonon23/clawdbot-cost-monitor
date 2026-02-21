@@ -1,7 +1,7 @@
 let ws;
 let costChart = null;
 let timelineChart = null;
-let activeTimelineWindow = '7d';
+let activeTimelineWindow = '4h';
 
 function sanitizeHtml(html) {
   if (window.DOMPurify) {
@@ -643,9 +643,9 @@ function renderData(data) {
       <div class="timeline-header">
         <h2>📈 Usage + Errors Timeline</h2>
         <div class="timeline-tabs">
-          <button class="timeline-tab" data-window="4h" onclick="loadTimeline('4h')">Last 4h</button>
+          <button class="timeline-tab active" data-window="4h" onclick="loadTimeline('4h')">Last 4h</button>
           <button class="timeline-tab" data-window="24h" onclick="loadTimeline('24h')">24h</button>
-          <button class="timeline-tab active" data-window="7d" onclick="loadTimeline('7d')">7d</button>
+          <button class="timeline-tab" data-window="7d" onclick="loadTimeline('7d')">7d</button>
         </div>
       </div>
       <div id="timelineMeta" class="timeline-meta"></div>
