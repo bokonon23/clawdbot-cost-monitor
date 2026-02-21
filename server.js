@@ -4,6 +4,9 @@ const WebSocket = require('ws');
 const path = require('path');
 const { analyzeUsage } = require('./cost-calculator');
 const { saveSnapshot, getDailyStats, getMonthlyProjection } = require('./history-tracker');
+const { buildTimeline } = require('./timeline-analyzer');
+const { buildDailyBreakdown } = require('./breakdown-analyzer');
+const { analyzeCronUsage } = require('./cron-usage-analyzer');
 
 const app = express();
 const server = http.createServer(app);
@@ -54,6 +57,39 @@ app.get('/api/plan-usage', (req, res) => {
 app.get('/api/projection', (req, res) => {
   const projection = getMonthlyProjection();
   res.json(projection || {});
+});
+
+// API endpoint for timeline view (5-minute buckets)
+app.get('/api/timeline', (req, res) => {
+  try {
+    const windowKey = req.query.window || '24h';
+    const data = buildTimeline(windowKey, 5);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API endpoint for daily dimensions (cron / bots / agents)
+app.get('/api/daily-breakdown', (req, res) => {
+  try {
+    const days = parseInt(req.query.days || '7', 10);
+    const data = buildDailyBreakdown(Number.isFinite(days) ? days : 7);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API endpoint for cron usage (daily all-cron + hourly drilldown)
+app.get('/api/cron-usage', (req, res) => {
+  try {
+    const days = parseInt(req.query.days || '2', 10);
+    const data = analyzeCronUsage(Number.isFinite(days) ? days : 2);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // WebSocket connection

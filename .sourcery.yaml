@@ -1,0 +1,21 @@
+version: 1
+
+# Sourcery configuration (quality + security oriented)
+
+clone_detection:
+  min_lines: 8
+
+rule_settings:
+  enable:
+    - default
+  disable: []
+
+ignore:
+  - node_modules/**
+  - data/**
+  - screenshots/**
+
+metrics:
+  quality_gate:
+    maintainability: B
+    complexity: C
