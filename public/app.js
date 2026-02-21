@@ -1,5 +1,7 @@
 let ws;
 let costChart = null;
+let timelineChart = null;
+let activeTimelineWindow = '7d';
 
 // Load budget from localStorage (default $50)
 function getBudget() {
@@ -45,7 +47,9 @@ function connect() {
   
   ws.onopen = () => {
     updateStatus('connected', 'Connected');
-    loadHistoricalData();
+    loadTimeline(activeTimelineWindow);
+    loadDailyBreakdown(7);
+    loadCronUsage(2);
     loadProjection();
   };
   
@@ -196,6 +200,214 @@ function renderChart(history) {
   });
 }
 
+async function loadCronUsage(days = 2) {
+  try {
+    const response = await fetch(`/api/cron-usage?days=${days}`);
+    const data = await response.json();
+    renderCronUsage(data);
+  } catch (error) {
+    console.error('Failed to load cron usage:', error);
+  }
+}
+
+function renderCronUsage(data) {
+  const el = document.getElementById('cronUsageBreakdown');
+  if (!el) return;
+  const days = (data && data.days) ? data.days.slice().reverse() : [];
+  if (!days.length) {
+    el.innerHTML = '<div class="empty-state"><p>No cron usage data.</p></div>';
+    return;
+  }
+
+  let html = '';
+  for (const d of days) {
+    html += `<h3 style="margin:16px 0 8px;">${d.day} (UTC)</h3>`;
+    html += '<div class="daily-table-wrap"><table class="daily-table"><thead><tr><th>Cron</th><th>Input</th><th>Output</th><th>Total</th><th>Runs</th><th>Errors</th></tr></thead><tbody>';
+    for (const c of d.crons) {
+      html += `<tr><td>${c.name}</td><td>${formatTokens(c.input)}</td><td>${formatTokens(c.output)}</td><td>${formatTokens(c.total)}</td><td>${c.runs}</td><td>${c.errors}</td></tr>`;
+    }
+    html += '</tbody></table></div>';
+  }
+
+  // Hourly drilldown (top 5 by recent total)
+  const hourly = data.hourlyByCron || {};
+  const top = Object.entries(hourly)
+    .map(([name, rows]) => ({ name, total: rows.reduce((s, r) => s + (r.total || 0), 0), rows }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 5);
+
+  if (top.length) {
+    html += '<h3 style="margin:18px 0 8px;">Last 24h hourly drilldown (top 5 crons)</h3>';
+    for (const t of top) {
+      html += `<details style="margin-bottom:10px;"><summary><strong>${t.name}</strong> — ${formatTokens(t.total)}</summary>`;
+      html += '<div class="daily-table-wrap"><table class="daily-table"><thead><tr><th>Hour (UTC)</th><th>Input</th><th>Output</th><th>Total</th><th>Runs</th><th>Errors</th></tr></thead><tbody>';
+      for (const r of t.rows) {
+        html += `<tr><td>${r.hour}</td><td>${formatTokens(r.input)}</td><td>${formatTokens(r.output)}</td><td>${formatTokens(r.total)}</td><td>${r.runs}</td><td>${r.errors}</td></tr>`;
+      }
+      html += '</tbody></table></div></details>';
+    }
+  }
+
+  el.innerHTML = html;
+}
+
+async function loadDailyBreakdown(days = 7) {
+  try {
+    const response = await fetch(`/api/daily-breakdown?days=${days}`);
+    const data = await response.json();
+    renderDailyBreakdown(data);
+  } catch (error) {
+    console.error('Failed to load daily breakdown:', error);
+  }
+}
+
+function renderDailyBreakdown(data) {
+  const el = document.getElementById('dailyBreakdown');
+  if (!el) return;
+  const days = (data && data.days) ? data.days.slice().reverse() : [];
+  if (!days.length) {
+    el.innerHTML = '<div class="empty-state"><p>No daily breakdown data yet.</p></div>';
+    return;
+  }
+
+  let html = '<div class="daily-table-wrap"><table class="daily-table"><thead><tr><th>Date</th><th>Cron Tokens</th><th>Top Cron</th><th>Bots Tokens</th><th>Top Bot</th><th>Agents Tokens</th><th>Top Agent</th></tr></thead><tbody>';
+
+  for (const d of days) {
+    const cronTokens = (d.totals.cronInput || 0) + (d.totals.cronOutput || 0);
+    const botTokens = (d.bots || []).reduce((s, b) => s + (b.total || 0), 0);
+    const agentTokens = (d.totals.agentInput || 0) + (d.totals.agentOutput || 0);
+    const topCron = (d.cron && d.cron[0]) ? `${d.cron[0].name} (${formatTokens(d.cron[0].total)})` : '-';
+    const topBot = (d.bots && d.bots[0]) ? `${d.bots[0].agent} (${formatTokens(d.bots[0].total)})` : '-';
+    const topAgent = (d.agents && d.agents[0]) ? `${d.agents[0].agent} (${formatTokens(d.agents[0].total)})` : '-';
+
+    html += `<tr>
+      <td>${d.date}</td>
+      <td>${formatTokens(cronTokens)}</td>
+      <td>${topCron}</td>
+      <td>${formatTokens(botTokens)}</td>
+      <td>${topBot}</td>
+      <td>${formatTokens(agentTokens)}</td>
+      <td>${topAgent}</td>
+    </tr>`;
+  }
+
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+async function loadTimeline(windowKey = activeTimelineWindow) {
+  activeTimelineWindow = windowKey;
+
+  // Tab UI state
+  const tabs = document.querySelectorAll('.timeline-tab');
+  tabs.forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.window === windowKey);
+  });
+
+  try {
+    const response = await fetch(`/api/timeline?window=${encodeURIComponent(windowKey)}`);
+    const data = await response.json();
+    renderTimelineChart(data, windowKey);
+  } catch (error) {
+    console.error('Failed to load timeline:', error);
+  }
+}
+
+function renderTimelineChart(data, windowKey) {
+  const canvas = document.getElementById('timelineChart');
+  if (!canvas || !data || !Array.isArray(data.labels)) return;
+
+  const labels = data.labels.map(ts => {
+    const d = new Date(ts);
+    if (windowKey === '7d') {
+      return d.toLocaleString('en-GB', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+    return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  });
+
+  const palette = ['#667eea', '#10b981', '#f59e0b', '#ef4444', '#a78bfa', '#22d3ee'];
+  const topModels = (data.models || []).slice(0, 5);
+
+  const datasets = topModels.map((m, idx) => ({
+    type: 'line',
+    label: m.display,
+    data: m.points,
+    borderColor: palette[idx % palette.length],
+    backgroundColor: 'transparent',
+    tension: 0.25,
+    borderWidth: 2,
+    pointRadius: 0,
+    yAxisID: 'yTokens'
+  }));
+
+  datasets.push({
+    type: 'bar',
+    label: 'Errors',
+    data: (data.errors && data.errors.all) ? data.errors.all : [],
+    yAxisID: 'yErrors',
+    backgroundColor: 'rgba(239, 68, 68, 0.35)',
+    borderColor: 'rgba(239, 68, 68, 0.8)',
+    borderWidth: 1,
+    barThickness: 'flex'
+  });
+
+  datasets.push({
+    type: 'line',
+    label: 'Cooldown errors',
+    data: (data.errors && data.errors.cooldown) ? data.errors.cooldown : [],
+    yAxisID: 'yErrors',
+    borderColor: '#f59e0b',
+    backgroundColor: 'transparent',
+    tension: 0.2,
+    borderWidth: 2,
+    pointRadius: 0
+  });
+
+  if (timelineChart) timelineChart.destroy();
+
+  timelineChart = new Chart(canvas.getContext('2d'), {
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: '#94a3b8' } },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.85)',
+          titleColor: '#fff',
+          bodyColor: '#fff'
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#94a3b8', maxRotation: 0, autoSkip: true, maxTicksLimit: 12 },
+          grid: { color: 'rgba(255,255,255,0.04)' }
+        },
+        yTokens: {
+          position: 'left',
+          ticks: {
+            color: '#94a3b8',
+            callback: (v) => formatTokens(v)
+          },
+          grid: { color: 'rgba(255,255,255,0.05)' }
+        },
+        yErrors: {
+          position: 'right',
+          beginAtZero: true,
+          ticks: { color: '#fca5a5', precision: 0 },
+          grid: { drawOnChartArea: false }
+        }
+      }
+    }
+  });
+
+  const info = document.getElementById('timelineMeta');
+  if (info && data.meta) {
+    info.textContent = `${windowKey.toUpperCase()} · 5m buckets · ${data.meta.totalRuns || 0} runs · ${data.meta.errorRuns || 0} errors`;
+  }
+}
+
 function renderProjection(projection) {
   if (!projection || !projection.projectedMonthTotal) return;
   
@@ -342,12 +554,20 @@ function renderData(data) {
     </div>
   `;
   
-  // Chart
+  // Timeline chart with tabs
   html += `
     <div class="chart-card">
-      <h2>📈 7-Day Cost History</h2>
+      <div class="timeline-header">
+        <h2>📈 Usage + Errors Timeline</h2>
+        <div class="timeline-tabs">
+          <button class="timeline-tab" data-window="4h" onclick="loadTimeline('4h')">Last 4h</button>
+          <button class="timeline-tab" data-window="24h" onclick="loadTimeline('24h')">24h</button>
+          <button class="timeline-tab active" data-window="7d" onclick="loadTimeline('7d')">7d</button>
+        </div>
+      </div>
+      <div id="timelineMeta" class="timeline-meta"></div>
       <div class="chart-container">
-        <canvas id="costChart"></canvas>
+        <canvas id="timelineChart"></canvas>
       </div>
     </div>
   `;
@@ -393,6 +613,19 @@ function renderData(data) {
     html += `</div>`;
   }
 
+  // Daily dimension breakdown
+  html += `
+    <div class="model-card">
+      <h2>📅 Daily Breakdown (Cron / Bots / Agents)</h2>
+      <div id="dailyBreakdown" class="empty-state"><p>Loading daily breakdown…</p></div>
+    </div>
+
+    <div class="model-card">
+      <h2>⏱️ Cron Usage (All Crons Daily + Hourly)</h2>
+      <div id="cronUsageBreakdown" class="empty-state"><p>Loading cron usage…</p></div>
+    </div>
+  `;
+
   // Compact caching savings (below model breakdown)
   if (data.totalCacheReadTokens > 0 && savingsFromCaching > 0.10) {
     html += `
@@ -408,8 +641,10 @@ function renderData(data) {
 
   document.getElementById('content').innerHTML = html;
   
-  // Re-render chart and projection
-  loadHistoricalData();
+  // Re-render timeline, breakdowns, and projection
+  loadTimeline(activeTimelineWindow);
+  loadDailyBreakdown(7);
+  loadCronUsage(2);
   loadProjection();
 }
 

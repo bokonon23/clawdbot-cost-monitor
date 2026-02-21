@@ -445,12 +445,48 @@ header h1 {
 
 .chart-card h2 {
   font-size: 1.4rem;
-  margin-bottom: 25px;
+  margin-bottom: 0;
   color: var(--text-primary);
 }
 
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.timeline-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.timeline-tab {
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.timeline-tab.active {
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border-color: transparent;
+}
+
+.timeline-meta {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
 .chart-container {
-  height: 300px;
+  height: 320px;
   position: relative;
 }
 
@@ -520,6 +556,30 @@ header h1 {
   font-size: 0.85rem;
   color: var(--text-secondary);
   margin-top: 3px;
+}
+
+.daily-table-wrap {
+  overflow-x: auto;
+}
+
+.daily-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.daily-table th,
+.daily-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 10px 8px;
+  text-align: left;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.daily-table th {
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 /* Alerts */
