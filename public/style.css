@@ -582,6 +582,12 @@ header h1 {
   font-weight: 600;
 }
 
+.setting-help {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin: 8px 0 12px;
+}
+
 /* Alerts */
 .alert {
   padding: 20px 25px;

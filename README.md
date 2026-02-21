@@ -4,7 +4,15 @@
 
 Track your OpenClaw or Claude Code AI spending with a **stunning dark-theme dashboard**. Get accurate lifetime costs by parsing JSONL session files, understand your token usage, and see exactly how much you're saving with prompt caching.
 
-**NEW in v0.6.0:** 📊 **JSONL parsing!** Now reads full message history from session files for accurate cost tracking. Validated against Claude Console - matches within $2!
+**NEW in local fork:** 📈 **Ops analytics upgrades**
+- Timeline tabs: **Last 4h / 24h / 7d** in 5-minute buckets
+- Error overlays: total errors + cooldown trend line
+- Daily breakdown dimensions: **Cron / Bots / Agents**
+- New cron usage section: **all crons daily + hourly drilldown**
+- Alias-aware model labels in timeline and model views
+- Optional budget mode: disable budget alerts if you don't want them
+
+**v0.6.0:** 📊 **JSONL parsing!** Now reads full message history from session files for accurate cost tracking. Validated against Claude Console - matches within $2!
 
 **v0.5.0:** 🎯 Lifetime cost tracking - never lose historical data again.
 
@@ -53,6 +61,18 @@ A **stunning, modern dashboard** with advanced analytics and beautiful UI:
 - ✅ 7-day cost history with beautiful charts
 - ✅ Daily spending trends
 - ✅ Animated Chart.js visualizations
+- ✅ 4h/24h/7d timeline switching with 5-minute buckets
+- ✅ Daily + hourly cron usage tables
+
+**🧭 Ops Breakdown Dimensions (NEW):**
+- ✅ Daily tokens by **Cron**
+- ✅ Daily tokens by **Bots**
+- ✅ Daily tokens by **Agents**
+- ✅ Hourly drilldown for top cron consumers
+
+**📌 Model Usage & Remaining:**
+- ✅ Per-model usage totals from local logs
+- ℹ️ "Remaining" quota status shown as `n/a` unless provider quota APIs are configured
 
 **🎯 Budget Projections:**
 - ✅ Monthly cost projection based on usage

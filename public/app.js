@@ -9,12 +9,22 @@ function getBudget() {
   return saved ? parseFloat(saved) : 50;
 }
 
+function isBudgetEnabled() {
+  const saved = localStorage.getItem('budgetEnabled');
+  return saved === null ? true : saved === 'true';
+}
+
 function setBudget(amount) {
   localStorage.setItem('monthlyBudget', amount);
 }
 
+function setBudgetEnabled(enabled) {
+  localStorage.setItem('budgetEnabled', enabled ? 'true' : 'false');
+}
+
 function openSettings() {
   document.getElementById('budgetInput').value = getBudget();
+  document.getElementById('budgetEnabled').checked = isBudgetEnabled();
   document.getElementById('settingsModal').classList.add('active');
 }
 
@@ -23,8 +33,18 @@ function closeSettings() {
 }
 
 function saveBudget() {
+  const budgetEnabled = document.getElementById('budgetEnabled').checked;
   const budget = parseFloat(document.getElementById('budgetInput').value);
+
+  if (!budgetEnabled) {
+    setBudgetEnabled(false);
+    closeSettings();
+    loadProjection();
+    return;
+  }
+
   if (budget && budget > 0) {
+    setBudgetEnabled(true);
     setBudget(budget);
     closeSettings();
     loadProjection();
@@ -410,10 +430,11 @@ function renderTimelineChart(data, windowKey) {
 
 function renderProjection(projection) {
   if (!projection || !projection.projectedMonthTotal) return;
-  
+  if (!isBudgetEnabled()) return;
+
   const budget = getBudget();
   const percentOver = ((projection.projectedMonthTotal / budget) - 1) * 100;
-  
+
   // Show budget alert if over threshold
   if (projection.projectedMonthTotal > budget) {
     const alertHtml = `
@@ -451,6 +472,7 @@ function renderData(data) {
   const totalTokens = data.totalInputTokens + data.totalOutputTokens + 
                       data.totalCacheReadTokens + data.totalCacheWriteTokens;
   const budget = getBudget();
+  const budgetEnabled = isBudgetEnabled();
   
   // Format tracking info
   let lastUpdateText = '';
@@ -490,7 +512,7 @@ function renderData(data) {
   }
   
   // Budget alert
-  if (data.totalCost > budget * 0.8) {
+  if (budgetEnabled && data.totalCost > budget * 0.8) {
     const percentUsed = ((data.totalCost / budget) * 100).toFixed(0);
     const isOverBudget = data.totalCost > budget;
     
@@ -554,6 +576,14 @@ function renderData(data) {
     </div>
   `;
   
+  if (!budgetEnabled) {
+    html += `
+      <div class="stat-card" style="margin-top: 12px; border-color: rgba(148,163,184,0.35);">
+        <div style="color:#94a3b8;">💸 Budget alerts are currently disabled</div>
+      </div>
+    `;
+  }
+
   // Timeline chart with tabs
   html += `
     <div class="chart-card">
@@ -611,6 +641,19 @@ function renderData(data) {
     });
     
     html += `</div>`;
+  }
+
+  // Model usage + remaining status
+  if (sortedModels.length > 0) {
+    html += `<div class="model-card"><h2>📌 Model Usage & Remaining</h2>`;
+    html += `<p class="setting-help">Remaining quota is only available when provider quota APIs are configured. This view always shows per-model usage from your local logs.</p>`;
+    html += '<div class="daily-table-wrap"><table class="daily-table"><thead><tr><th>Model</th><th>Tokens Used</th><th>Cost</th><th>Remaining</th></tr></thead><tbody>';
+    sortedModels.forEach(([model, stats]) => {
+      const used = (stats.inputTokens || 0) + (stats.outputTokens || 0) + (stats.cacheReadTokens || 0) + (stats.cacheWriteTokens || 0);
+      const name = model.replace('anthropic/', '').replace('openai/', '');
+      html += `<tr><td>${name}</td><td>${formatTokens(used)}</td><td>${formatCost(stats.cost || 0)}</td><td>n/a (provider quota API required)</td></tr>`;
+    });
+    html += '</tbody></table></div></div>';
   }
 
   // Daily dimension breakdown

@@ -23,9 +23,16 @@
       <h2>⚙️ Settings</h2>
       
       <div class="setting-item">
+        <label style="display:flex;align-items:center;gap:10px;">
+          <input type="checkbox" id="budgetEnabled" checked>
+          <span>Enable budget alerts</span>
+        </label>
+      </div>
+
+      <div class="setting-item">
         <label for="budgetInput">Monthly Budget ($)</label>
         <input type="number" id="budgetInput" placeholder="50" min="1" step="1">
-        <p>Set your monthly AI spending budget. You'll get alerts when you're on track to exceed it.</p>
+        <p>Set your monthly AI spending budget. You can disable budget alerts entirely.</p>
       </div>
       
       <div class="settings-buttons">
