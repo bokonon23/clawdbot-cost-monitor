@@ -70,10 +70,13 @@ function buildTimeline(windowKey = '24h', bucketMinutes = 5) {
     return { labels, models: [], errors, meta: { from, to: now, totalRuns, errorRuns, bucketMinutes } };
   }
 
-  for (const file of fs.readdirSync(RUNS_DIR)) {
-    if (!file.endsWith('.jsonl')) continue;
+  const MAX_FILES = 200;
+  const runFiles = fs.readdirSync(RUNS_DIR).filter(f => f.endsWith('.jsonl')).slice(0, MAX_FILES);
+
+  for (const file of runFiles) {
     const filePath = path.join(RUNS_DIR, file);
-    const lines = fs.readFileSync(filePath, 'utf8').split('\n');
+    let lines;
+    try { lines = fs.readFileSync(filePath, 'utf8').split('\n'); } catch { continue; }
 
     for (const line of lines) {
       if (!line.trim()) continue;

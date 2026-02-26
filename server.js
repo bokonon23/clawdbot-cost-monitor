@@ -153,7 +153,7 @@ setInterval(async () => {
 server.listen(PORT, HOST, () => {
   console.log('\n' +
     '========================================\n' +
-    '  CLAUDE CODE COST MONITOR v0.6.0\n' +
+    '  CLAUDE CODE COST MONITOR v0.7.1\n' +
     '========================================\n' +
     '\n' +
     '  Dashboard: http://' + HOST + ':' + PORT + '\n' +

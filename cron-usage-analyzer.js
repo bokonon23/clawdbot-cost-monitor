@@ -32,11 +32,14 @@ function analyzeCronUsage(days = 2) {
 
   if (!fs.existsSync(CRON_RUNS_DIR)) return { days: [], hourlyByCron: {} };
 
-  for (const file of fs.readdirSync(CRON_RUNS_DIR)) {
-    if (!file.endsWith('.jsonl')) continue;
+  const MAX_FILES = 200;
+  const files = fs.readdirSync(CRON_RUNS_DIR).filter(f => f.endsWith('.jsonl')).slice(0, MAX_FILES);
+
+  for (const file of files) {
     const jobId = file.replace(/\.jsonl$/, '');
     const cronName = nameById[jobId] || jobId;
-    const lines = fs.readFileSync(path.join(CRON_RUNS_DIR, file), 'utf8').split('\n');
+    let lines;
+    try { lines = fs.readFileSync(path.join(CRON_RUNS_DIR, file), 'utf8').split('\n'); } catch { continue; }
 
     for (const line of lines) {
       if (!line.trim()) continue;
