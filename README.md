@@ -4,14 +4,24 @@
 
 Track your OpenClaw or Claude Code AI spending with a **stunning dark-theme dashboard**. Get accurate lifetime costs by parsing JSONL session files, understand your token usage, and see exactly how much you're saving with prompt caching.
 
-**NEW in v0.6.0:** 📊 **JSONL parsing!** Now reads full message history from session files for accurate cost tracking. Validated against Claude Console - matches within $2!
+**NEW in v0.7.1 (local fork):** ✅ **4h timeline default + timeline reliability polish**
+
+**v0.7.0 (local fork):** 📈 **Ops analytics upgrades**
+- Timeline tabs: **Last 4h / 24h / 7d** in 5-minute buckets
+- Error overlays: total errors + cooldown trend line
+- Daily breakdown dimensions: **Cron / Bots / Agents**
+- New cron usage section: **all crons daily + hourly drilldown**
+- Alias-aware model labels in timeline and model views
+- Optional budget mode: disable budget alerts if you don't want them
+
+**v0.6.0:** 📊 **JSONL parsing!** Now reads full message history from session files for accurate cost tracking. Validated against Claude Console - matches within $2!
 
 **v0.5.0:** 🎯 Lifetime cost tracking - never lose historical data again.
 
 **v0.4.0:** Complete UI redesign with modern glassmorphism, smooth animations, and professional polish! 🎨
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-0.6.0-blue.svg)](https://github.com/bokonon23/clawdbot-cost-monitor)
+[![Version](https://img.shields.io/badge/version-0.7.1-blue.svg)](https://github.com/bokonon23/clawdbot-cost-monitor)
 [![Node](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen.svg)](https://nodejs.org/)
 
 ![Dashboard Screenshot](screenshots/dashboard.png)
@@ -53,6 +63,23 @@ A **stunning, modern dashboard** with advanced analytics and beautiful UI:
 - ✅ 7-day cost history with beautiful charts
 - ✅ Daily spending trends
 - ✅ Animated Chart.js visualizations
+- ✅ 4h/24h/7d timeline switching with 5-minute buckets
+- ✅ Daily + hourly cron usage tables
+
+**🧭 Ops Breakdown Dimensions (NEW):**
+- ✅ Daily tokens by **Cron**
+- ✅ Daily tokens by **Bots**
+- ✅ Daily tokens by **Agents**
+- ✅ Hourly drilldown for top cron consumers
+
+**📌 Model Usage & Remaining:**
+- ✅ Per-model usage totals from local logs
+- ℹ️ "Remaining" quota status shown as `n/a` unless provider quota APIs are configured
+
+**💳 Plan-Aware Cost View (NEW):**
+- ✅ Shows **API-equivalent cost** and **plan-adjusted marginal cost**
+- ✅ Treats OAuth/subscription-backed lanes as $0 marginal in plan-adjusted view
+- ℹ️ API-key-backed providers remain billable in plan-adjusted estimate
 
 **🎯 Budget Projections:**
 - ✅ Monthly cost projection based on usage
@@ -251,6 +278,19 @@ If this tool helps you track costs and save money:
 Every star helps others discover this tool! 🙏
 
 ## 📝 Version History
+
+### v0.7.1 (Feb 21, 2026) - Timeline Default + Stability 🛠️
+- Default timeline window set to **Last 4h**
+- Fixed timeline tab active-state defaults to match selected window
+- Version bump and docs refresh
+
+### v0.7.0 (Feb 21, 2026) - Ops Dashboard + Plan-Aware Cost 🚀
+- Added timeline tabs (4h/24h/7d) with 5-minute buckets
+- Added daily breakdown dimensions: cron / bots / agents
+- Added cron usage section: all-cron daily totals + hourly drilldown
+- Added model usage + remaining status panel
+- Added optional budget disable toggle
+- Added plan-adjusted marginal cost view for OAuth/subscription-backed providers
 
 ### v0.6.0 (Feb 5, 2026) - JSONL Parsing 📊
 - **MAJOR:** Parse JSONL session files for accurate cost tracking

@@ -97,6 +97,26 @@ function getSessionSearchPaths() {
   ];
 }
 
+function resolveBaseSafe(baseDir, childName) {
+  if (path.isAbsolute(childName) || childName.includes('\0')) {
+    throw new Error('Unsafe path segment');
+  }
+  const baseResolved = path.resolve(baseDir);
+  const candidate = path.resolve(baseResolved, childName);
+  if (!(candidate === baseResolved || candidate.startsWith(baseResolved + path.sep))) {
+    throw new Error('Path traversal attempt blocked');
+  }
+  return candidate;
+}
+
+function isPathInAllowedRoots(targetPath, roots) {
+  const targetResolved = path.resolve(targetPath);
+  return roots.some((root) => {
+    const rootResolved = path.resolve(root);
+    return targetResolved === rootResolved || targetResolved.startsWith(rootResolved + path.sep);
+  });
+}
+
 /**
  * Recursively find all JSONL files in a directory
  */
@@ -107,7 +127,13 @@ function findJsonlFiles(dir) {
   try {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
+      let fullPath;
+      try {
+        fullPath = resolveBaseSafe(dir, entry.name);
+      } catch {
+        continue;
+      }
+
       if (entry.isDirectory()) {
         files.push(...findJsonlFiles(fullPath));
       } else if (entry.name.endsWith('.jsonl')) {
@@ -137,6 +163,12 @@ async function parseJsonlFile(filePath) {
     firstTimestamp: null,
     lastTimestamp: null
   };
+
+  const allowedRoots = getSessionSearchPaths();
+  if (!isPathInAllowedRoots(filePath, allowedRoots)) {
+    console.error('Refusing to read path outside allowed roots:', filePath);
+    return results;
+  }
 
   try {
     const fileStream = fs.createReadStream(filePath);
