@@ -41,7 +41,9 @@ function buildDailyBreakdown(days = 7) {
       const jobId = file.replace(/\.jsonl$/, '');
       const jobName = jobNameById[jobId] || jobId;
       const p = path.join(CRON_RUNS_DIR, file);
-      for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
+      let lines;
+      try { lines = fs.readFileSync(p, 'utf8').split('\n'); } catch { continue; }
+      for (const line of lines) {
         if (!line.trim()) continue;
         let ev;
         try { ev = JSON.parse(line); } catch { continue; }
@@ -72,7 +74,9 @@ function buildDailyBreakdown(days = 7) {
       for (const file of fs.readdirSync(sessionsDir)) {
         if (!file.endsWith('.jsonl')) continue;
         const p = path.join(sessionsDir, file);
-        for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
+        let sessionLines;
+        try { sessionLines = fs.readFileSync(p, 'utf8').split('\n'); } catch { continue; }
+        for (const line of sessionLines) {
           if (!line.trim()) continue;
           let ev;
           try { ev = JSON.parse(line); } catch { continue; }
