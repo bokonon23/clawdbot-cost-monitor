@@ -8,7 +8,8 @@ const CONFIG_PATH = path.join(os.homedir(), '.openclaw', 'openclaw.json');
 const WINDOW_MS = {
   '4h': 4 * 60 * 60 * 1000,
   '24h': 24 * 60 * 60 * 1000,
-  '7d': 7 * 24 * 60 * 60 * 1000
+  '7d': 7 * 24 * 60 * 60 * 1000,
+  '30d': 30 * 24 * 60 * 60 * 1000
 };
 
 function loadAliases() {
@@ -70,7 +71,7 @@ function buildTimeline(windowKey = '24h', bucketMinutes = 5) {
     return { labels, models: [], errors, meta: { from, to: now, totalRuns, errorRuns, bucketMinutes } };
   }
 
-  const MAX_FILES = 200;
+  const MAX_FILES = 500;
   const runFiles = fs.readdirSync(RUNS_DIR).filter(f => f.endsWith('.jsonl')).slice(0, MAX_FILES);
 
   for (const file of runFiles) {

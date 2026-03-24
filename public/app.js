@@ -356,6 +356,9 @@ function renderTimelineChart(data, windowKey) {
 
   const labels = data.labels.map(ts => {
     const d = new Date(ts);
+    if (windowKey === '30d') {
+      return d.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
+    }
     if (windowKey === '7d') {
       return d.toLocaleString('en-GB', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     }
@@ -643,9 +646,10 @@ function renderData(data) {
       <div class="timeline-header">
         <h2>📈 Usage + Errors Timeline</h2>
         <div class="timeline-tabs">
-          <button class="timeline-tab active" data-window="4h" onclick="loadTimeline('4h')">Last 4h</button>
-          <button class="timeline-tab" data-window="24h" onclick="loadTimeline('24h')">24h</button>
-          <button class="timeline-tab" data-window="7d" onclick="loadTimeline('7d')">7d</button>
+          <button class="timeline-tab active" data-window="4h">Last 4h</button>
+          <button class="timeline-tab" data-window="24h">24h</button>
+          <button class="timeline-tab" data-window="7d">7d</button>
+          <button class="timeline-tab" data-window="30d">30d</button>
         </div>
       </div>
       <div id="timelineMeta" class="timeline-meta"></div>
@@ -741,6 +745,14 @@ function renderData(data) {
   loadTimeline(activeTimelineWindow);
   loadDailyBreakdown(7);
   loadCronUsage(2);
+
+  // Bind timeline tab clicks (event delegation — inline onclick stripped by DOMPurify)
+  document.querySelectorAll('.timeline-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const w = tab.dataset.window;
+      if (w) loadTimeline(w);
+    });
+  });
   loadProjection();
 }
 
