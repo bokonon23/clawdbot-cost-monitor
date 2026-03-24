@@ -63,7 +63,9 @@ app.get('/api/projection', (req, res) => {
 app.get('/api/timeline', (req, res) => {
   try {
     const windowKey = req.query.window || '24h';
-    const data = buildTimeline(windowKey, 5);
+    // Use larger buckets for longer windows to keep chart readable
+    const bucketMinutes = windowKey === '30d' ? 360 : windowKey === '7d' ? 60 : 5;
+    const data = buildTimeline(windowKey, bucketMinutes);
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: error.message });

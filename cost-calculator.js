@@ -136,7 +136,7 @@ function findJsonlFiles(dir) {
 
       if (entry.isDirectory()) {
         files.push(...findJsonlFiles(fullPath));
-      } else if (entry.name.endsWith('.jsonl')) {
+      } else if (entry.name.endsWith('.jsonl') || entry.name.includes('.jsonl.')) {
         files.push(fullPath);
       }
     }
